@@ -27,8 +27,8 @@ class PoojaResource extends JsonResource
             'amount_formatted' => '₹' . number_format($this->amount, 2),
             'devotee_required' => $this->devotee_required,
             'is_active' => $this->is_active,
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }
