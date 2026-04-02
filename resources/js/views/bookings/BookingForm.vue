@@ -242,6 +242,11 @@ const fetchAccounts = async () => {
   }
 };
 
+// Auto-fill payment amount with total amount
+watch(totalAmount, (newTotal) => {
+  form.value.payment_amount = newTotal;
+});
+
 // Auto-select account when payment method changes
 watch(() => form.value.payment_method, (method) => {
   if (method === 'cash') {
@@ -264,7 +269,7 @@ watch(() => form.value.payment_method, (method) => {
 const onPoojaSelect = () => {
   const pooja = selectedPooja.value;
   if (pooja) {
-    form.value.deity_id = pooja.deity_id;
+    form.value.deity_id = pooja.deity_id || '';  // Empty string for "No specific deity"
     form.value.frequency = pooja.frequency || 'once';
 
     // If devotee required and no beneficiaries, add one

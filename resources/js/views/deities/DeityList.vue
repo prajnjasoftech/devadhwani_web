@@ -183,7 +183,7 @@ onMounted(fetchDeities);
         :current-page="currentPage"
         :last-page="meta.last_page"
         :total="meta.total"
-        @update:current-page="currentPage = $event"
+        @page-change="currentPage = $event"
         class="mt-6"
       />
     </Card>
