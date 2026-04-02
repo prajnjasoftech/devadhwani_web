@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vendor;
+use App\Rules\IndianMobile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -51,7 +52,7 @@ class VendorController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'contact_person' => 'nullable|string|max:255',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', new IndianMobile],
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',
@@ -89,7 +90,7 @@ class VendorController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'contact_person' => 'nullable|string|max:255',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', new IndianMobile],
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',

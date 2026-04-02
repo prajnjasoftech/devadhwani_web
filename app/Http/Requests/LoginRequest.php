@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 
 class LoginRequest extends FormRequest
@@ -14,7 +15,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'contact_number' => ['required', 'string', 'max:20'],
+            'contact_number' => ['required', 'string', new IndianMobile],
             'password' => ['required', 'string'],
         ];
     }

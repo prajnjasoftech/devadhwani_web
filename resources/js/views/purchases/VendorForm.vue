@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
 import api from '@/composables/useApi';
+import { isValidIndianMobile, mobileValidationMessage } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
@@ -57,6 +58,13 @@ const fetchVendor = async () => {
 
 const handleSubmit = async () => {
   errors.value = {};
+
+  // Validate mobile number
+  if (form.value.contact_number && !isValidIndianMobile(form.value.contact_number)) {
+    errors.value.contact_number = [mobileValidationMessage];
+    return;
+  }
+
   saving.value = true;
 
   try {
@@ -137,8 +145,11 @@ onMounted(() => {
           <Input
             v-model="form.contact_number"
             label="Phone Number"
-            placeholder="e.g., 9876543210"
-            :error="errors.contact_number?.[0]"
+            placeholder="10-digit mobile number"
+            :error="errors.contact_number?.[0] || (form.contact_number && !isValidIndianMobile(form.contact_number) ? mobileValidationMessage : '')"
+            pattern="[6-9][0-9]{9}"
+            maxlength="10"
+            inputmode="tel"
           />
           <Input
             v-model="form.email"

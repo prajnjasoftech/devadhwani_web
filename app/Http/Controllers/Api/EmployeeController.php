@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Role;
+use App\Rules\IndianMobile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,8 +61,8 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
-            'contact_number' => 'required|string|max:20',
-            'alternate_contact' => 'nullable|string|max:20',
+            'contact_number' => ['required', 'string', new IndianMobile],
+            'alternate_contact' => ['nullable', 'string', new IndianMobile],
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string',
             'date_of_birth' => 'nullable|date',
@@ -132,8 +133,8 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'designation' => 'sometimes|string|max:255',
-            'contact_number' => 'sometimes|string|max:20',
-            'alternate_contact' => 'nullable|string|max:20',
+            'contact_number' => ['sometimes', 'string', new IndianMobile],
+            'alternate_contact' => ['nullable', 'string', new IndianMobile],
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string',
             'date_of_birth' => 'nullable|date',

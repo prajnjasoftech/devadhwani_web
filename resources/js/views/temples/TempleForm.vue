@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
 import api from '@/composables/useApi';
+import { isValidIndianMobile, mobileValidationMessage } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
@@ -69,6 +70,17 @@ const fetchTemple = async () => {
 
 const handleSubmit = async () => {
   errors.value = {};
+
+  // Validate mobile numbers
+  if (form.value.contact_number && !isValidIndianMobile(form.value.contact_number)) {
+    errors.value.contact_number = [mobileValidationMessage];
+    return;
+  }
+  if (form.value.alternate_contact_number && !isValidIndianMobile(form.value.alternate_contact_number)) {
+    errors.value.alternate_contact_number = [mobileValidationMessage];
+    return;
+  }
+
   saving.value = true;
 
   try {
@@ -140,13 +152,21 @@ onMounted(fetchTemple);
                 label="Contact Number"
                 type="tel"
                 required
-                :error="errors.contact_number?.[0]"
+                :error="errors.contact_number?.[0] || (form.contact_number && !isValidIndianMobile(form.contact_number) ? mobileValidationMessage : '')"
+                pattern="[6-9][0-9]{9}"
+                maxlength="10"
+                inputmode="tel"
+                placeholder="10-digit mobile"
               />
               <Input
                 v-model="form.alternate_contact_number"
                 label="Alternate Contact"
                 type="tel"
-                :error="errors.alternate_contact_number?.[0]"
+                :error="errors.alternate_contact_number?.[0] || (form.alternate_contact_number && !isValidIndianMobile(form.alternate_contact_number) ? mobileValidationMessage : '')"
+                pattern="[6-9][0-9]{9}"
+                maxlength="10"
+                inputmode="tel"
+                placeholder="10-digit mobile"
               />
             </div>
             <Input

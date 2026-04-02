@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
 import api from '@/composables/useApi';
+import { isValidIndianMobile } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
@@ -197,6 +198,11 @@ const isValid = computed(() => {
     }
   }
 
+  // Validate mobile number if provided
+  if (form.value.contact_number && !isValidIndianMobile(form.value.contact_number)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -265,12 +271,22 @@ watch(() => form.value.payment_method, (method) => {
   }
 });
 
-// On pooja select - pre-fill deity and frequency
+// On pooja select - pre-fill deity, frequency, and start date
 const onPoojaSelect = () => {
   const pooja = selectedPooja.value;
   if (pooja) {
     form.value.deity_id = pooja.deity_id || '';  // Empty string for "No specific deity"
     form.value.frequency = pooja.frequency || 'once';
+
+    // If pooja has next_pooja_date and it's upcoming, use it as start date
+    if (pooja.next_pooja_date) {
+      const nextDate = new Date(pooja.next_pooja_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (nextDate >= today) {
+        form.value.start_date = pooja.next_pooja_date;
+      }
+    }
 
     // If devotee required and no beneficiaries, add one
     if (pooja.devotee_required && form.value.beneficiaries.length === 0) {
@@ -296,6 +312,16 @@ watch(() => form.value.start_date, (newDate) => {
     form.value.weekly_day = new Date(newDate).getDay();
   }
 });
+
+// Auto-fill contact name with first devotee's name when contact is required
+watch(
+  [contactRequired, () => form.value.beneficiaries[0]?.name],
+  ([required, firstName]) => {
+    if (required && firstName?.trim() && !form.value.contact_name) {
+      form.value.contact_name = firstName.trim();
+    }
+  }
+);
 
 // Devotee autocomplete
 let searchTimeout = null;
@@ -748,9 +774,12 @@ onMounted(async () => {
             <Input
               v-model="form.contact_number"
               :label="contactRequired ? 'Contact Number *' : 'Contact Number'"
-              placeholder="Mobile number"
+              placeholder="10-digit mobile number"
               :required="contactRequired"
               :error="errors.contact_number?.[0]"
+              pattern="[6-9][0-9]{9}"
+              maxlength="10"
+              inputmode="tel"
             />
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">

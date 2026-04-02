@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -19,7 +20,7 @@ class UpdateUserRequest extends FormRequest
 
         $rules = [
             'name' => ['sometimes', 'string', 'max:255'],
-            'contact_number' => ['sometimes', 'string', 'max:20', Rule::unique('users', 'contact_number')->ignore($userId)],
+            'contact_number' => ['sometimes', 'string', new IndianMobile, Rule::unique('users', 'contact_number')->ignore($userId)],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
             'role_id' => ['nullable', 'exists:roles,id'],

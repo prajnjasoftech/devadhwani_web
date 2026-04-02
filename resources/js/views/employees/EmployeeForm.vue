@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
 import api from '@/composables/useApi';
+import { isValidIndianMobile, mobileValidationMessage } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
@@ -95,6 +96,17 @@ const fetchEmployee = async () => {
 
 const handleSubmit = async () => {
   errors.value = {};
+
+  // Validate mobile numbers
+  if (form.value.contact_number && !isValidIndianMobile(form.value.contact_number)) {
+    errors.value.contact_number = [mobileValidationMessage];
+    return;
+  }
+  if (form.value.alternate_contact && !isValidIndianMobile(form.value.alternate_contact)) {
+    errors.value.alternate_contact = [mobileValidationMessage];
+    return;
+  }
+
   saving.value = true;
 
   try {
@@ -213,14 +225,21 @@ onMounted(async () => {
           <Input
             v-model="form.contact_number"
             label="Contact Number *"
-            placeholder="Enter contact number"
+            placeholder="10-digit mobile number"
             required
-            :error="errors.contact_number?.[0]"
+            :error="errors.contact_number?.[0] || (form.contact_number && !isValidIndianMobile(form.contact_number) ? mobileValidationMessage : '')"
+            pattern="[6-9][0-9]{9}"
+            maxlength="10"
+            inputmode="tel"
           />
           <Input
             v-model="form.alternate_contact"
             label="Alternate Contact"
-            placeholder="Optional"
+            placeholder="10-digit mobile number"
+            :error="form.alternate_contact && !isValidIndianMobile(form.alternate_contact) ? mobileValidationMessage : ''"
+            pattern="[6-9][0-9]{9}"
+            maxlength="10"
+            inputmode="tel"
           />
           <Input
             v-model="form.email"

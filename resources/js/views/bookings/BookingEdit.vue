@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
 import api from '@/composables/useApi';
+import { isValidIndianMobile, mobileValidationMessage } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
@@ -50,6 +51,10 @@ const isValid = computed(() => {
     if (form.value.prasadam_required && !form.value.contact_address) {
       return false;
     }
+  }
+  // Validate mobile number if provided
+  if (form.value.contact_number && !isValidIndianMobile(form.value.contact_number)) {
+    return false;
   }
   return true;
 });
@@ -180,9 +185,12 @@ onMounted(fetchBooking);
           <Input
             v-model="form.contact_number"
             :label="contactRequired ? 'Contact Number *' : 'Contact Number'"
-            placeholder="Mobile number"
+            placeholder="10-digit mobile number"
             :required="contactRequired"
-            :error="errors.contact_number?.[0]"
+            :error="errors.contact_number?.[0] || (form.contact_number && !isValidIndianMobile(form.contact_number) ? mobileValidationMessage : '')"
+            pattern="[6-9][0-9]{9}"
+            maxlength="10"
+            inputmode="tel"
           />
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1">

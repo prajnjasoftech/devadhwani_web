@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBookingRequest extends FormRequest
@@ -16,7 +17,7 @@ class StoreBookingRequest extends FormRequest
         return [
             // Contact Details (validated in BookingService based on conditions)
             'contact_name' => 'nullable|string|max:255',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', new IndianMobile],
             'contact_email' => 'nullable|email|max:255',
             'contact_address' => 'nullable|string',
             'prasadam_required' => 'boolean',

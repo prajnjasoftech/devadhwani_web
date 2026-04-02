@@ -10,6 +10,13 @@ defineProps({
   error: String,
   required: Boolean,
   disabled: Boolean,
+  pattern: String,
+  maxlength: [String, Number],
+  minlength: [String, Number],
+  min: [String, Number],
+  max: [String, Number],
+  step: [String, Number],
+  inputmode: String,
 });
 
 defineEmits(['update:modelValue']);
@@ -28,6 +35,13 @@ defineEmits(['update:modelValue']);
       :placeholder="placeholder"
       :disabled="disabled"
       :required="required"
+      :pattern="pattern"
+      :maxlength="maxlength"
+      :minlength="minlength"
+      :min="min"
+      :max="max"
+      :step="step"
+      :inputmode="inputmode"
       class="w-full px-3 py-2 border rounded-md text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
       :class="error ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'"
     />

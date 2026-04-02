@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
+import { isValidIndianMobile, mobileValidationMessage } from '@/composables/useValidation';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -13,10 +14,19 @@ const form = ref({
   password: '',
 });
 const error = ref('');
+const mobileError = ref('');
 const loading = ref(false);
 
 const handleLogin = async () => {
   error.value = '';
+  mobileError.value = '';
+
+  // Validate mobile number
+  if (!isValidIndianMobile(form.value.contact_number)) {
+    mobileError.value = mobileValidationMessage;
+    return;
+  }
+
   loading.value = true;
 
   const result = await authStore.login(form.value.contact_number, form.value.password);
@@ -58,8 +68,12 @@ const handleLogin = async () => {
             v-model="form.contact_number"
             label="Contact Number"
             type="tel"
-            placeholder="Enter your contact number"
+            placeholder="10-digit mobile number"
             required
+            :error="mobileError"
+            pattern="[6-9][0-9]{9}"
+            maxlength="10"
+            inputmode="tel"
           />
 
           <Input

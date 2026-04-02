@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -16,7 +17,7 @@ class StoreUserRequest extends FormRequest
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'string', 'max:20', 'unique:users,contact_number'],
+            'contact_number' => ['required', 'string', new IndianMobile, 'unique:users,contact_number'],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
             'role_id' => ['nullable', 'exists:roles,id'],

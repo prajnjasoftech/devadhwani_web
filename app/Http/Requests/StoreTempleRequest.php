@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTempleRequest extends FormRequest
@@ -16,8 +17,8 @@ class StoreTempleRequest extends FormRequest
         return [
             'temple_name' => ['required', 'string', 'max:255'],
             'contact_person_name' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'string', 'max:20', 'unique:temples,contact_number', 'unique:users,contact_number'],
-            'alternate_contact_number' => ['nullable', 'string', 'max:20'],
+            'contact_number' => ['required', 'string', new IndianMobile, 'unique:temples,contact_number', 'unique:users,contact_number'],
+            'alternate_contact_number' => ['nullable', 'string', new IndianMobile],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
             'district' => ['nullable', 'string', 'max:100'],

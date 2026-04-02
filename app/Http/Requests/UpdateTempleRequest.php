@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\IndianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,8 +20,8 @@ class UpdateTempleRequest extends FormRequest
         return [
             'temple_name' => ['sometimes', 'string', 'max:255'],
             'contact_person_name' => ['sometimes', 'string', 'max:255'],
-            'contact_number' => ['sometimes', 'string', 'max:20', Rule::unique('temples', 'contact_number')->ignore($templeId)],
-            'alternate_contact_number' => ['nullable', 'string', 'max:20'],
+            'contact_number' => ['sometimes', 'string', new IndianMobile, Rule::unique('temples', 'contact_number')->ignore($templeId)],
+            'alternate_contact_number' => ['nullable', 'string', new IndianMobile],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
             'district' => ['nullable', 'string', 'max:100'],
