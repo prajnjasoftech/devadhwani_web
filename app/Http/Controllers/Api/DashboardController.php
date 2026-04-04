@@ -224,9 +224,9 @@ class DashboardController extends Controller
         }
 
         // Income by account
-        $incomeByAccount = LedgerEntry::where('temple_id', $templeId)
-            ->whereBetween('entry_date', [$startDate, $endDate])
-            ->credits()
+        $incomeByAccount = LedgerEntry::where('ledger_entries.temple_id', $templeId)
+            ->whereBetween('ledger_entries.entry_date', [$startDate, $endDate])
+            ->where('ledger_entries.type', 'credit')
             ->join('accounts', 'ledger_entries.account_id', '=', 'accounts.id')
             ->select('accounts.account_name', 'accounts.account_type', DB::raw('SUM(ledger_entries.amount) as total'))
             ->groupBy('accounts.id', 'accounts.account_name', 'accounts.account_type')
