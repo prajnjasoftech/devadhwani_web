@@ -29,19 +29,85 @@ const poojas = ref([]);
 const todaySchedule = ref([]);
 const recentBookings = ref([]);
 
-// Date filter
-const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-const selectedMonth = ref(currentMonth);
+// Date filter options
+const filterOptions = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'last_month', label: 'Last Month' },
+  { value: 'this_year', label: 'This Year' },
+  { value: 'custom', label: 'Custom Range' },
+];
 
-// Computed date range
+const selectedFilter = ref('this_month');
+const customStartDate = ref('');
+const customEndDate = ref('');
+
+// Helper to format date as YYYY-MM-DD
+const formatDate = (date) => date.toISOString().split('T')[0];
+
+// Computed date range based on selected filter
 const dateRange = computed(() => {
-  const [year, month] = selectedMonth.value.split('-');
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0);
-  return {
-    start_date: start.toISOString().split('T')[0],
-    end_date: end.toISOString().split('T')[0],
-  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  switch (selectedFilter.value) {
+    case 'today':
+      return {
+        start_date: formatDate(today),
+        end_date: formatDate(today),
+      };
+    case 'yesterday': {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return {
+        start_date: formatDate(yesterday),
+        end_date: formatDate(yesterday),
+      };
+    }
+    case 'this_month': {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return {
+        start_date: formatDate(start),
+        end_date: formatDate(end),
+      };
+    }
+    case 'last_month': {
+      const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 0);
+      return {
+        start_date: formatDate(start),
+        end_date: formatDate(end),
+      };
+    }
+    case 'this_year': {
+      const start = new Date(today.getFullYear(), 0, 1);
+      const end = new Date(today.getFullYear(), 11, 31);
+      return {
+        start_date: formatDate(start),
+        end_date: formatDate(end),
+      };
+    }
+    case 'custom':
+      return {
+        start_date: customStartDate.value || formatDate(today),
+        end_date: customEndDate.value || formatDate(today),
+      };
+    default:
+      return {
+        start_date: formatDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        end_date: formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0)),
+      };
+  }
+});
+
+// Display label for current filter
+const filterDisplayLabel = computed(() => {
+  if (selectedFilter.value === 'custom' && customStartDate.value && customEndDate.value) {
+    return `${customStartDate.value} to ${customEndDate.value}`;
+  }
+  return filterOptions.find(f => f.value === selectedFilter.value)?.label || 'This Month';
 });
 
 // Chart options
@@ -180,8 +246,19 @@ const fetchData = async () => {
   }
 };
 
-// Watch for month change
-watch(selectedMonth, fetchData);
+// Watch for filter change
+watch(selectedFilter, (newVal) => {
+  if (newVal !== 'custom') {
+    fetchData();
+  }
+});
+
+// Watch custom dates
+watch([customStartDate, customEndDate], () => {
+  if (selectedFilter.value === 'custom' && customStartDate.value && customEndDate.value) {
+    fetchData();
+  }
+});
 
 onMounted(fetchData);
 </script>
@@ -194,14 +271,32 @@ onMounted(fetchData);
         <p class="text-gray-500">Welcome back, {{ authStore.user?.name }}</p>
       </div>
 
-      <!-- Month Filter (Temple Users Only) -->
-      <div v-if="!authStore.isPlatformAdmin" class="flex items-center gap-2">
+      <!-- Date Filter (Temple Users Only) -->
+      <div v-if="!authStore.isPlatformAdmin" class="flex flex-wrap items-center gap-2">
         <CalendarIcon class="w-5 h-5 text-gray-400" />
-        <input
-          v-model="selectedMonth"
-          type="month"
+        <select
+          v-model="selectedFilter"
           class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
+        >
+          <option v-for="opt in filterOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+
+        <!-- Custom Date Range -->
+        <template v-if="selectedFilter === 'custom'">
+          <input
+            v-model="customStartDate"
+            type="date"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+          <span class="text-gray-400">to</span>
+          <input
+            v-model="customEndDate"
+            type="date"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+        </template>
       </div>
     </div>
 
@@ -315,7 +410,7 @@ onMounted(fetchData);
             </div>
           </div>
           <div class="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
-            Income - Expense for {{ summary?.period?.month_name }}
+            Income - Expense for {{ filterDisplayLabel }}
           </div>
         </Card>
 
@@ -343,7 +438,7 @@ onMounted(fetchData);
               <CurrencyRupeeIcon class="w-6 h-6 text-indigo-600" />
             </div>
             <div>
-              <p class="text-sm text-gray-500">Bookings This Month</p>
+              <p class="text-sm text-gray-500">Bookings ({{ filterDisplayLabel }})</p>
               <p class="text-xl font-bold text-gray-900">{{ summary?.counts?.bookings || 0 }}</p>
             </div>
           </div>
@@ -355,7 +450,7 @@ onMounted(fetchData);
               <BanknotesIcon class="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <p class="text-sm text-gray-500">Donations This Month</p>
+              <p class="text-sm text-gray-500">Donations ({{ filterDisplayLabel }})</p>
               <p class="text-xl font-bold text-gray-900">{{ summary?.counts?.donations || 0 }}</p>
             </div>
           </div>
