@@ -437,4 +437,98 @@ class DashboardController extends Controller
             'data' => $bookings,
         ]);
     }
+
+    /**
+     * Mobile app dashboard stats (separate endpoint for mobile app only)
+     * Does not affect any web functionality
+     */
+    public function mobile(): JsonResponse
+    {
+        $user = auth()->user();
+
+        if ($user->isPlatformAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dashboard not available for platform admin',
+            ], 403);
+        }
+
+        $templeId = $user->temple_id;
+        $today = Carbon::today();
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+
+        // Today's stats
+        $todayBookings = Booking::where('temple_id', $templeId)
+            ->whereDate('booking_date', $today)
+            ->where('booking_status', '!=', 'cancelled');
+        $todayBookingsCount = (clone $todayBookings)->count();
+        $todayBookingsAmount = (clone $todayBookings)->sum('total_amount');
+
+        // Today's collections (payments received today)
+        $todayCollections = LedgerEntry::where('temple_id', $templeId)
+            ->whereDate('entry_date', $today)
+            ->where('source_type', 'booking')
+            ->credits()
+            ->sum('amount');
+
+        // Today's poojas
+        $todaySchedules = BookingSchedule::whereHas('bookingItem.booking', function ($q) use ($templeId) {
+            $q->where('temple_id', $templeId)->where('booking_status', '!=', 'cancelled');
+        })->where('scheduled_date', $today);
+        $poojasScheduled = (clone $todaySchedules)->count();
+        $poojasCompleted = (clone $todaySchedules)->where('status', 'completed')->count();
+
+        // Monthly stats
+        $monthlyBookings = Booking::where('temple_id', $templeId)
+            ->whereBetween('booking_date', [$monthStart, $monthEnd])
+            ->where('booking_status', '!=', 'cancelled');
+        $monthlyBookingsCount = (clone $monthlyBookings)->count();
+        $monthlyBookingsAmount = (clone $monthlyBookings)->sum('total_amount');
+
+        // Monthly collections
+        $monthlyCollections = LedgerEntry::where('temple_id', $templeId)
+            ->whereBetween('entry_date', [$monthStart, $monthEnd])
+            ->where('source_type', 'booking')
+            ->credits()
+            ->sum('amount');
+
+        // Monthly poojas completed
+        $monthlyPoojasCompleted = BookingSchedule::whereHas('bookingItem.booking', function ($q) use ($templeId) {
+            $q->where('temple_id', $templeId)->where('booking_status', '!=', 'cancelled');
+        })
+            ->whereBetween('scheduled_date', [$monthStart, $monthEnd])
+            ->where('status', 'completed')
+            ->count();
+
+        // Outstanding
+        $outstandingBookings = Booking::where('temple_id', $templeId)
+            ->where('booking_status', '!=', 'cancelled')
+            ->where('balance_amount', '>', 0);
+        $outstandingCount = (clone $outstandingBookings)->count();
+        $outstandingAmount = (clone $outstandingBookings)->sum('balance_amount');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'today' => [
+                    'bookings_count' => $todayBookingsCount,
+                    'bookings_amount' => round($todayBookingsAmount, 2),
+                    'poojas_scheduled' => $poojasScheduled,
+                    'poojas_completed' => $poojasCompleted,
+                    'collections_amount' => round($todayCollections, 2),
+                ],
+                'monthly' => [
+                    'bookings_count' => $monthlyBookingsCount,
+                    'bookings_amount' => round($monthlyBookingsAmount, 2),
+                    'collections_amount' => round($monthlyCollections, 2),
+                    'poojas_completed' => $monthlyPoojasCompleted,
+                ],
+                'outstanding' => [
+                    'bookings_count' => $outstandingCount,
+                    'total_amount' => round($outstandingAmount, 2),
+                ],
+            ],
+        ]);
+    }
 }

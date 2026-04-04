@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum', 'temple.active'])->group(function () {
         Route::get('/dashboard/poojas', [DashboardController::class, 'poojas'])->name('dashboard.poojas');
         Route::get('/dashboard/today', [DashboardController::class, 'today'])->name('dashboard.today');
         Route::get('/dashboard/recent-bookings', [DashboardController::class, 'recentBookings'])->name('dashboard.recent-bookings');
+        Route::get('/dashboard/mobile', [DashboardController::class, 'mobile'])->name('dashboard.mobile');
 
         // Calendar (Panchang)
         Route::get('/calendar/panchang', [CalendarController::class, 'getPanchang'])->name('calendar.panchang');
