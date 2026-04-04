@@ -337,7 +337,7 @@ onMounted(async () => {
                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Select Role</option>
-                <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
+                <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.role_name }}</option>
               </select>
               <p class="mt-1 text-xs text-gray-500">Default password will be: Employee@123</p>
             </div>
