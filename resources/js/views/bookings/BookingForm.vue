@@ -275,7 +275,14 @@ watch(() => form.value.payment_method, (method) => {
 const onPoojaSelect = () => {
   const pooja = selectedPooja.value;
   if (pooja) {
-    form.value.deity_id = pooja.deity_id || '';  // Empty string for "No specific deity"
+    // If pooja has a deity, use it; otherwise auto-select main deity
+    if (pooja.deity_id) {
+      form.value.deity_id = pooja.deity_id;
+    } else {
+      // Auto-select main deity when pooja has no deity assigned
+      const mainDeity = deities.value.find(d => d.deity_type === 'main');
+      form.value.deity_id = mainDeity?.id || '';
+    }
     form.value.frequency = pooja.frequency || 'once';
 
     // If pooja has next_pooja_date and it's upcoming, use it as start date
@@ -515,7 +522,7 @@ onMounted(async () => {
             >
               <option value="">Select Pooja</option>
               <option v-for="pooja in poojas" :key="pooja.id" :value="pooja.id">
-                {{ pooja.name }} - {{ pooja.amount_formatted }}
+                {{ pooja.booking_count > 0 ? '★ ' : '' }}{{ pooja.name }} - {{ pooja.amount_formatted }}
               </option>
             </select>
           </div>

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePoojaRequest;
 use App\Http\Requests\UpdatePoojaRequest;
 use App\Http\Resources\PoojaResource;
+use App\Models\BookingItem;
 use App\Models\Pooja;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PoojaController extends Controller
 {
@@ -48,11 +50,30 @@ class PoojaController extends Controller
 
     public function all(): JsonResponse
     {
+        $templeId = auth()->user()->temple_id;
+
+        // Get booking counts per pooja for this temple
+        $bookingCounts = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->where('bookings.temple_id', $templeId)
+            ->select('booking_items.pooja_id', DB::raw('COUNT(*) as booking_count'))
+            ->groupBy('booking_items.pooja_id')
+            ->pluck('booking_count', 'pooja_id');
+
         $poojas = Pooja::query()
             ->with('deity:id,name')
             ->active()
             ->orderBy('name')
             ->get();
+
+        // Add booking count and sort by frequency (desc), then name (asc)
+        $poojas = $poojas->map(function ($pooja) use ($bookingCounts) {
+            $pooja->booking_count = $bookingCounts[$pooja->id] ?? 0;
+            return $pooja;
+        })->sortBy([
+            ['booking_count', 'desc'],
+            ['name', 'asc'],
+        ])->values();
 
         return response()->json([
             'success' => true,
