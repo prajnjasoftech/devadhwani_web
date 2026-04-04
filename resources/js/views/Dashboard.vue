@@ -444,6 +444,7 @@ onMounted(fetchData);
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pooja Name</th>
                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Bookings</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Completed</th>
                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Income</th>
                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pending</th>
               </tr>
@@ -452,6 +453,10 @@ onMounted(fetchData);
               <tr v-for="pooja in poojas" :key="pooja.id" class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ pooja.name }}</td>
                 <td class="px-4 py-3 text-sm text-gray-600 text-right">{{ pooja.total_bookings }}</td>
+                <td class="px-4 py-3 text-sm text-right">
+                  <span class="text-green-600">{{ pooja.completed_count }}</span>
+                  <span class="text-gray-400">/{{ pooja.total_schedules }}</span>
+                </td>
                 <td class="px-4 py-3 text-sm text-green-600 font-medium text-right">{{ pooja.total_income_formatted }}</td>
                 <td class="px-4 py-3 text-sm text-right">
                   <span :class="pooja.pending_amount > 0 ? 'text-orange-600' : 'text-gray-400'">

@@ -292,10 +292,15 @@ class DashboardController extends Controller
                         ->where('booking_status', '!=', 'cancelled')
                         ->whereBetween('booking_date', [$startDate, $endDate]);
                 })
+                ->with('schedules')
                 ->get();
 
             $totalBookings = $bookingItems->count();
             $totalIncome = $bookingItems->sum('total_amount');
+
+            // Count completed and total schedules
+            $completedCount = $bookingItems->sum(fn($item) => $item->schedules->where('status', 'completed')->count());
+            $totalSchedules = $bookingItems->sum(fn($item) => $item->schedules->count());
 
             // Calculate pending from booking balance
             $pendingAmount = $bookingItems->sum(function ($item) {
@@ -314,6 +319,8 @@ class DashboardController extends Controller
                     'id' => $pooja->id,
                     'name' => $pooja->name,
                     'total_bookings' => $totalBookings,
+                    'completed_count' => $completedCount,
+                    'total_schedules' => $totalSchedules,
                     'total_income' => round($totalIncome, 2),
                     'total_income_formatted' => '₹' . number_format($totalIncome, 2),
                     'pending_amount' => round($pendingAmount, 2),
