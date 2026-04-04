@@ -198,9 +198,10 @@ const expenseSourceSeries = computed(() => [
 const accountChartOptions = computed(() => ({
   chart: { type: 'bar', height: 280, toolbar: { show: false } },
   plotOptions: {
-    bar: { horizontal: true, borderRadius: 4 },
+    bar: { horizontal: true, borderRadius: 4, distributed: true },
   },
-  colors: ['#6366F1'],
+  colors: ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'],
+  legend: { show: false },
   xaxis: {
     categories: charts.value?.income_by_account?.map(a => a.name) || [],
     labels: {
