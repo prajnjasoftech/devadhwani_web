@@ -98,9 +98,10 @@ Route::middleware(['auth:sanctum', 'temple.active'])->group(function () {
             ->name('users.destroy');
 
         // Roles
+        // /roles/all is accessible to all authenticated temple users (needed for user/employee creation)
+        Route::get('/roles/all', [RoleController::class, 'all'])->name('roles.all');
         Route::middleware(['permission:roles,read'])->group(function () {
             Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-            Route::get('/roles/all', [RoleController::class, 'all'])->name('roles.all');
             Route::get('/roles/{role}', [RoleController::class, 'show'])->name('roles.show');
         });
         Route::post('/roles', [RoleController::class, 'store'])
