@@ -223,8 +223,9 @@ class DashboardController extends Controller
             }
         }
 
-        // Income by account
-        $incomeByAccount = LedgerEntry::where('ledger_entries.temple_id', $templeId)
+        // Income by account (use withoutGlobalScope to avoid ambiguous temple_id in JOIN)
+        $incomeByAccount = LedgerEntry::withoutGlobalScope('temple')
+            ->where('ledger_entries.temple_id', $templeId)
             ->whereBetween('ledger_entries.entry_date', [$startDate, $endDate])
             ->where('ledger_entries.type', 'credit')
             ->join('accounts', 'ledger_entries.account_id', '=', 'accounts.id')
