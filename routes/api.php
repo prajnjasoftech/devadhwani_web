@@ -45,6 +45,11 @@ Route::middleware(['auth:sanctum', 'temple.active'])->group(function () {
     Route::middleware(['password.reset'])->group(function () {
         // Dashboard
         Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
+        Route::get('/dashboard/charts', [DashboardController::class, 'charts'])->name('dashboard.charts');
+        Route::get('/dashboard/poojas', [DashboardController::class, 'poojas'])->name('dashboard.poojas');
+        Route::get('/dashboard/today', [DashboardController::class, 'today'])->name('dashboard.today');
+        Route::get('/dashboard/recent-bookings', [DashboardController::class, 'recentBookings'])->name('dashboard.recent-bookings');
 
         // Calendar (Panchang)
         Route::get('/calendar/panchang', [CalendarController::class, 'getPanchang'])->name('calendar.panchang');
