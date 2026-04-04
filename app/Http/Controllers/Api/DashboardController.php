@@ -296,6 +296,7 @@ class DashboardController extends Controller
                 ->get();
 
             $totalBookings = $bookingItems->count();
+            $totalCount = $bookingItems->sum('beneficiary_count'); // Total quantity (mala count, devotee count, etc.)
             $totalIncome = $bookingItems->sum('total_amount');
 
             // Count completed and total schedules
@@ -318,7 +319,8 @@ class DashboardController extends Controller
                 $poojaStats[] = [
                     'id' => $pooja->id,
                     'name' => $pooja->name,
-                    'total_bookings' => $totalBookings,
+                    'total_count' => $totalCount, // Total quantity (10 malas, 5 devotees, etc.)
+                    'total_bookings' => $totalBookings, // Number of booking items
                     'completed_count' => $completedCount,
                     'total_schedules' => $totalSchedules,
                     'total_income' => round($totalIncome, 2),
