@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\EmployeeSalaryController;
 use App\Http\Controllers\Api\EmployeePaymentController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\TempleController;
@@ -51,6 +52,9 @@ Route::middleware(['auth:sanctum', 'temple.active'])->group(function () {
         Route::get('/dashboard/today', [DashboardController::class, 'today'])->name('dashboard.today');
         Route::get('/dashboard/recent-bookings', [DashboardController::class, 'recentBookings'])->name('dashboard.recent-bookings');
         Route::get('/dashboard/mobile', [DashboardController::class, 'mobile'])->name('dashboard.mobile');
+
+        // Reports
+        Route::get('/reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
 
         // Calendar (Panchang)
         Route::get('/calendar/panchang', [CalendarController::class, 'getPanchang'])->name('calendar.panchang');

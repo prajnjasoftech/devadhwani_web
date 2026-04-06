@@ -22,6 +22,7 @@ import {
   GiftIcon,
   IdentificationIcon,
   DocumentTextIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
 
 const route = useRoute();
@@ -86,6 +87,9 @@ const navigation = computed(() => {
 
   // Calendar - available to all temple users
   items.push({ name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon, permission: null });
+
+  // Reports - available to all temple users
+  items.push({ name: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon, permission: null });
 
   // Temple Settings, Accounts & Ledger - only for Super Admin (system role)
   if (authStore.user?.role?.is_system_role) {

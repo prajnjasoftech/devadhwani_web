@@ -329,6 +329,13 @@ const routes = [
         component: () => import('@/views/calendar/CalendarView.vue'),
         meta: { templeUserOnly: true },
       },
+      // Reports
+      {
+        path: 'reports',
+        name: 'reports',
+        component: () => import('@/views/reports/ReportList.vue'),
+        meta: { templeUserOnly: true },
+      },
       // Employees
       {
         path: 'employees',
