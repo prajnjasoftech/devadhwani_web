@@ -41,37 +41,35 @@ class ReportController extends Controller
 
         // INCOME SECTION
 
-        // Bookings with items
-        $bookings = Booking::where('temple_id', $templeId)
+        // Bookings - group by pooja type
+        $bookingsQuery = Booking::where('temple_id', $templeId)
             ->whereBetween('booking_date', [$startDate, $endDate])
             ->where('booking_status', '!=', 'cancelled')
-            ->with(['items.pooja:id,name', 'payments' => function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('payment_date', [$startDate, $endDate]);
-            }])
-            ->orderBy('booking_date')
-            ->orderBy('created_at')
-            ->get()
-            ->map(function ($booking) {
-                $poojaNames = $booking->items->pluck('pooja.name')->filter()->unique()->values();
-                $itemCount = $booking->items->count();
-                $totalQuantity = $booking->items->sum('beneficiary_count');
+            ->with(['items.pooja:id,name'])
+            ->get();
 
+        // Flatten all booking items and group by pooja
+        $allItems = $bookingsQuery->flatMap(function ($booking) {
+            return $booking->items->map(function ($item) use ($booking) {
                 return [
-                    'id' => $booking->id,
-                    'booking_number' => $booking->booking_number,
-                    'booking_date' => $booking->booking_date->format('d M Y'),
-                    'contact_name' => $booking->contact_name,
-                    'contact_number' => $booking->contact_number,
-                    'poojas' => $poojaNames,
-                    'items_count' => $itemCount,
-                    'total_quantity' => $totalQuantity,
-                    'total_amount' => round($booking->total_amount, 2),
-                    'paid_amount' => round($booking->paid_amount, 2),
-                    'balance_amount' => round($booking->balance_amount, 2),
-                    'payment_status' => $booking->payment_status,
-                    'payments_in_period' => $booking->payments->sum('amount'),
+                    'pooja_id' => $item->pooja_id,
+                    'pooja_name' => $item->pooja->name ?? 'Unknown',
+                    'quantity' => $item->beneficiary_count,
+                    'amount' => $item->total_amount,
+                    'booking_id' => $booking->id,
                 ];
             });
+        });
+
+        $bookings = $allItems->groupBy('pooja_name')->map(function ($items, $poojaName) {
+            $bookingIds = $items->pluck('booking_id')->unique();
+            return [
+                'pooja_name' => $poojaName,
+                'quantity' => $items->sum('quantity'),
+                'total_amount' => round($items->sum('amount'), 2),
+                'bookings_count' => $bookingIds->count(),
+            ];
+        })->sortByDesc('total_amount')->values();
 
         // Donations
         $donations = Donation::where('temple_id', $templeId)
@@ -183,7 +181,7 @@ class ReportController extends Controller
 
         // Calculate totals
         $totalBookingAmount = $bookings->sum('total_amount');
-        $totalBookingPaid = $bookings->sum('paid_amount');
+        $totalBookingPaid = $bookingsQuery->sum('paid_amount');
         $totalDonationAmount = $donations->where('donation_type', 'financial')->sum('amount');
         $totalDonationAssetValue = $donations->where('donation_type', 'asset')->sum('estimated_value');
 

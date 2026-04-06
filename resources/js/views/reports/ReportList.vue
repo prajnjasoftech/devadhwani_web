@@ -241,62 +241,34 @@ onMounted(fetchReport);
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <DocumentTextIcon class="w-5 h-5 text-indigo-600" />
-              Bookings
-              <span class="text-sm font-normal text-gray-500">({{ reportData.income.bookings.count }} bookings)</span>
+              Bookings (Pooja-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.income.bookings.count }} poojas)</span>
             </h3>
-            <span class="text-lg font-bold text-green-600">₹{{ reportData.income.bookings.total_paid.toLocaleString() }}</span>
+            <span class="text-lg font-bold text-green-600">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</span>
           </div>
 
           <div v-if="reportData.income.bookings.data.length" class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Booking #</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Contact</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Poojas</th>
-                  <th class="px-3 py-2 text-center font-medium text-gray-500">Items</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
-                  <th class="px-3 py-2 text-center font-medium text-gray-500">Status</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Pooja</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Qty</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Bookings</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Amount</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="booking in reportData.income.bookings.data" :key="booking.id" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-medium text-gray-900">{{ booking.booking_number }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ booking.booking_date }}</td>
-                  <td class="px-3 py-2 text-gray-600">
-                    <div>{{ booking.contact_name || '-' }}</div>
-                    <div class="text-xs text-gray-400">{{ booking.contact_number || '' }}</div>
-                  </td>
-                  <td class="px-3 py-2 text-gray-600">
-                    <div v-for="pooja in booking.poojas" :key="pooja" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded inline-block mr-1 mb-1">
-                      {{ pooja }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2 text-center text-gray-600">{{ booking.items_count }}</td>
-                  <td class="px-3 py-2 text-right text-gray-900">₹{{ booking.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-green-600">₹{{ booking.paid_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-center">
-                    <span
-                      class="px-2 py-0.5 text-xs rounded-full"
-                      :class="{
-                        'bg-green-100 text-green-700': booking.payment_status === 'paid',
-                        'bg-orange-100 text-orange-700': booking.payment_status === 'partial',
-                        'bg-red-100 text-red-700': booking.payment_status === 'pending',
-                      }"
-                    >
-                      {{ booking.payment_status }}
-                    </span>
-                  </td>
+                <tr v-for="item in reportData.income.bookings.data" :key="item.pooja_name" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ item.pooja_name }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ item.quantity }}</td>
+                  <td class="px-3 py-2 text-center text-gray-500">{{ item.bookings_count }}</td>
+                  <td class="px-3 py-2 text-right font-medium text-green-600">₹{{ item.total_amount.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total</td>
-                  <td class="px-3 py-2 text-right font-semibold text-gray-700">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-bold text-green-600">₹{{ reportData.income.bookings.total_paid.toLocaleString() }}</td>
-                  <td></td>
+                  <td colspan="3" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-right font-bold text-green-600">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</td>
                 </tr>
               </tfoot>
             </table>
