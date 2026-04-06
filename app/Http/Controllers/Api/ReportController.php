@@ -145,20 +145,21 @@ class ReportController extends Controller
         // Employee Salaries
         $salaries = EmployeeSalary::where('temple_id', $templeId)
             ->whereBetween('payment_date', [$startDate, $endDate])
-            ->where('status', 'paid')
+            ->where('payment_status', 'paid')
             ->with(['employee:id,name,employee_code'])
             ->orderBy('payment_date')
             ->get()
             ->map(function ($salary) {
+                $grossSalary = ($salary->basic_salary ?? 0) + ($salary->allowances ?? 0);
                 return [
                     'id' => $salary->id,
                     'employee_name' => $salary->employee->name ?? 'N/A',
                     'employee_code' => $salary->employee->employee_code ?? 'N/A',
                     'month_year' => $salary->month . '/' . $salary->year,
                     'payment_date' => $salary->payment_date?->format('d M Y'),
-                    'gross_salary' => round($salary->gross_salary, 2),
-                    'deductions' => round($salary->deductions, 2),
-                    'net_salary' => round($salary->net_salary, 2),
+                    'gross_salary' => round($grossSalary, 2),
+                    'deductions' => round($salary->deductions ?? 0, 2),
+                    'net_salary' => round($salary->net_salary ?? 0, 2),
                 ];
             });
 
