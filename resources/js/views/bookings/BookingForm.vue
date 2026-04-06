@@ -117,19 +117,21 @@ const occurrences = computed(() => {
   }
 });
 
-// Count - either quantity (for no devotee required) or actual devotee count
-const itemCount = computed(() => {
-  if (!selectedPooja.value?.devotee_required) {
-    return form.value.quantity || 1;
-  }
+// Get quantity (always used)
+const quantity = computed(() => {
+  return form.value.quantity || 1;
+});
+
+// Get devotee count (number of beneficiaries with names, minimum 1)
+const devoteeCount = computed(() => {
   const count = form.value.beneficiaries.filter(b => b.name?.trim()).length;
   return count > 0 ? count : 1;
 });
 
-// Calculate total amount (amount * occurrences * count)
+// Calculate total amount: amount × quantity × devotee_count × occurrences
 const totalAmount = computed(() => {
   if (!selectedPooja.value) return 0;
-  return selectedPooja.value.amount * occurrences.value * itemCount.value;
+  return selectedPooja.value.amount * quantity.value * devoteeCount.value * occurrences.value;
 });
 
 // Calculate balance
@@ -178,11 +180,12 @@ const contactRequiredReason = computed(() => {
 
 // Form validation
 const isValid = computed(() => {
-  if (!form.value.pooja_id || !form.value.start_date) {
+  // Pooja, deity, and start date are required
+  if (!form.value.pooja_id || !form.value.deity_id || !form.value.start_date) {
     return false;
   }
 
-  // Check beneficiaries if required
+  // Check beneficiaries if required by pooja
   if (selectedPooja.value?.devotee_required) {
     const hasValidBeneficiary = form.value.beneficiaries.some(b => b.name?.trim());
     if (!hasValidBeneficiary) return false;
@@ -445,20 +448,19 @@ const handleSubmit = async () => {
       notes: form.value.notes || null,
       items: [{
         pooja_id: form.value.pooja_id,
-        deity_id: form.value.deity_id || null,
+        deity_id: form.value.deity_id,
         frequency: form.value.frequency,
         weekly_day: form.value.frequency === 'weekly' ? form.value.weekly_day : null,
         start_date: form.value.start_date,
         end_date: form.value.frequency !== 'once' ? form.value.end_date : null,
-        // If devotee not required, send quantity; otherwise send beneficiaries
-        quantity: !selectedPooja.value?.devotee_required ? (form.value.quantity || 1) : null,
-        beneficiaries: selectedPooja.value?.devotee_required
-          ? form.value.beneficiaries.filter(b => b.name?.trim()).map(b => ({
-              name: b.name.trim(),
-              nakshathra_id: b.nakshathra_id ? parseInt(b.nakshathra_id) : null,
-              gothram: b.gothram?.trim() || null,
-            }))
-          : [],
+        // Always send quantity
+        quantity: form.value.quantity || 1,
+        // Always send beneficiaries (filtered to non-empty names)
+        beneficiaries: form.value.beneficiaries.filter(b => b.name?.trim()).map(b => ({
+          name: b.name.trim(),
+          nakshathra_id: b.nakshathra_id ? parseInt(b.nakshathra_id) : null,
+          gothram: b.gothram?.trim() || null,
+        })),
       }],
       payment_amount: form.value.payment_amount || null,
       payment_method: form.value.payment_amount > 0 ? form.value.payment_method : null,
@@ -527,12 +529,13 @@ onMounted(async () => {
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Deity</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Deity *</label>
             <select
               v-model="form.deity_id"
               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              required
             >
-              <option value="">No specific deity</option>
+              <option value="">Select Deity</option>
               <option v-for="deity in deities" :key="deity.id" :value="deity.id">
                 {{ deity.name }}
               </option>
@@ -587,8 +590,8 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Quantity for poojas without devotee requirement -->
-        <div v-if="selectedPooja && !selectedPooja.devotee_required" class="mt-6">
+        <!-- Quantity - always visible -->
+        <div v-if="selectedPooja" class="mt-6">
           <Input
             v-model.number="form.quantity"
             label="Quantity / Count"
@@ -602,7 +605,7 @@ onMounted(async () => {
         <div v-if="selectedPooja" class="mt-6 p-4 bg-primary-50 rounded-lg flex items-center justify-between">
           <div>
             <span class="text-sm text-gray-600">
-              {{ selectedPooja.amount_formatted }} x {{ occurrences }} occurrence(s) x {{ itemCount }} {{ selectedPooja.devotee_required ? 'devotee(s)' : 'count' }}
+              {{ selectedPooja.amount_formatted }} × {{ quantity }} qty × {{ devoteeCount }} devotee(s) × {{ occurrences }} occurrence(s)
             </span>
           </div>
           <div class="text-right">
@@ -611,14 +614,18 @@ onMounted(async () => {
         </div>
       </Card>
 
-      <!-- Beneficiaries / Devotees - Only show when devotee details are required -->
-      <Card v-if="selectedPooja?.devotee_required" title="Devotee Details">
-        <!-- Show warning only if devotee required AND no valid name entered yet -->
+      <!-- Beneficiaries / Devotees - Always visible -->
+      <Card v-if="selectedPooja" title="Devotee Details">
+        <!-- Show warning if devotee required AND no valid name entered yet -->
         <div v-if="selectedPooja?.devotee_required && !hasValidDevotee" class="mb-4 p-3 bg-orange-50 rounded-lg text-sm text-orange-700">
           Devotee details are required for this pooja
         </div>
+        <!-- Show info when devotee details are optional -->
+        <div v-else-if="!selectedPooja?.devotee_required && !hasValidDevotee" class="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+          Devotee details are optional for this pooja
+        </div>
         <!-- Show success indicator when devotee is filled -->
-        <div v-else-if="selectedPooja?.devotee_required && hasValidDevotee" class="mb-4 p-3 bg-green-50 rounded-lg text-sm text-green-700">
+        <div v-else-if="hasValidDevotee" class="mb-4 p-3 bg-green-50 rounded-lg text-sm text-green-700">
           ✓ Devotee details added
         </div>
 

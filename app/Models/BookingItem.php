@@ -23,6 +23,7 @@ class BookingItem extends Model
         'monthly_type',
         'monthly_day',
         'unit_amount',
+        'quantity',
         'beneficiary_count',
         'occurrence_count',
         'total_amount',
@@ -147,15 +148,16 @@ class BookingItem extends Model
 
     public function calculateTotalAmount(): void
     {
-        // Only update beneficiary_count from actual beneficiaries if they exist
-        // Otherwise keep the quantity that was set during creation (for poojas without devotee requirement)
+        // Update beneficiary_count from actual beneficiaries if they exist
         $actualBeneficiaries = $this->beneficiaries()->count();
         if ($actualBeneficiaries > 0) {
             $this->beneficiary_count = $actualBeneficiaries;
         }
-        // If no beneficiaries, keep the existing beneficiary_count (set from quantity)
+        // If no beneficiaries, beneficiary_count defaults to 1
 
-        $this->total_amount = $this->unit_amount * $this->beneficiary_count * $this->occurrence_count;
+        // Formula: amount × quantity × devotee_count × occurrences
+        $quantity = $this->quantity ?? 1;
+        $this->total_amount = $this->unit_amount * $quantity * $this->beneficiary_count * $this->occurrence_count;
         $this->save();
 
         // Recalculate booking totals

@@ -80,8 +80,42 @@ class BookingService
                 }
             }
 
+            // Auto-complete: If all items are one-time and scheduled for today, mark as completed
+            $this->autoCompleteIfEligible($booking);
+
             return $booking->load('items.beneficiaries', 'items.pooja', 'items.deity', 'payments');
         });
+    }
+
+    /**
+     * Auto-complete booking if all items are one-time and scheduled for today
+     */
+    protected function autoCompleteIfEligible(Booking $booking): void
+    {
+        $today = now()->toDateString();
+
+        // Check if all items are one-time and start today
+        $allOnceToday = $booking->items->every(function ($item) use ($today) {
+            return $item->frequency === 'once' && $item->start_date->toDateString() === $today;
+        });
+
+        if (!$allOnceToday) {
+            return;
+        }
+
+        Log::info('BookingService: Auto-completing booking', ['booking_id' => $booking->id]);
+
+        // Mark all pending schedules as completed
+        foreach ($booking->items as $item) {
+            $item->schedules()->where('status', 'pending')->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'completed_by' => auth()->id(),
+            ]);
+        }
+
+        // Update booking status to completed
+        $booking->update(['booking_status' => 'completed']);
     }
 
     /**
@@ -100,10 +134,17 @@ class BookingService
             throw new \Exception("Beneficiary details are required for {$pooja->name}");
         }
 
-        // Get quantity - either from explicit quantity field or will be calculated from beneficiaries
-        $quantity = !$pooja->devotee_required ? ($data['quantity'] ?? 1) : 1;
+        // Get quantity (always used, default 1)
+        $quantity = $data['quantity'] ?? 1;
 
-        Log::info('createBookingItem: Creating item record', ['quantity' => $quantity]);
+        // Get devotee count from beneficiaries (minimum 1)
+        $devoteeCount = !empty($data['beneficiaries']) ? count($data['beneficiaries']) : 1;
+
+        // Calculate initial amount: amount × quantity × devotee_count (occurrences handled by generateSchedules)
+        $unitAmount = $data['unit_amount'] ?? $pooja->amount;
+        $initialAmount = $unitAmount * $quantity * $devoteeCount;
+
+        Log::info('createBookingItem: Creating item record', ['quantity' => $quantity, 'devotee_count' => $devoteeCount, 'initial_amount' => $initialAmount]);
         $item = BookingItem::create([
             'booking_id' => $booking->id,
             'pooja_id' => $data['pooja_id'],
@@ -113,12 +154,13 @@ class BookingService
             'frequency' => $data['frequency'] ?? 'once',
             'monthly_type' => $data['monthly_type'] ?? null,
             'monthly_day' => $data['monthly_day'] ?? null,
-            'unit_amount' => $data['unit_amount'] ?? $pooja->amount,
+            'unit_amount' => $unitAmount,
+            'quantity' => $quantity,
             'notes' => $data['notes'] ?? null,
-            // Initial values - beneficiary_count set to quantity for poojas without devotee requirement
-            'beneficiary_count' => $quantity,
+            // beneficiary_count will be updated after adding beneficiaries
+            'beneficiary_count' => $devoteeCount,
             'occurrence_count' => 1,
-            'total_amount' => ($data['unit_amount'] ?? $pooja->amount) * $quantity,
+            'total_amount' => $initialAmount,
         ]);
         Log::info('createBookingItem: Item created', ['item_id' => $item->id]);
 
