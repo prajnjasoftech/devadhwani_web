@@ -41,9 +41,9 @@ class ReportController extends Controller
 
         // INCOME SECTION
 
-        // Bookings - group by pooja type
+        // Bookings - group by pooja type (filter by booking_date)
         $bookingsQuery = Booking::where('temple_id', $templeId)
-            ->whereBetween('booking_date', [$startDate, $endDate])
+            ->whereBetween('booking_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('booking_status', '!=', 'cancelled')
             ->with(['items.pooja:id,name'])
             ->get();
@@ -51,10 +51,12 @@ class ReportController extends Controller
         // Flatten all booking items and group by pooja
         $allItems = $bookingsQuery->flatMap(function ($booking) {
             return $booking->items->map(function ($item) use ($booking) {
+                // Use quantity for quantity-based poojas, otherwise use beneficiary_count
+                $qty = ($item->quantity && $item->quantity > 1) ? $item->quantity : ($item->beneficiary_count ?? 1);
                 return [
                     'pooja_id' => $item->pooja_id,
                     'pooja_name' => $item->pooja->name ?? 'Unknown',
-                    'quantity' => $item->beneficiary_count,
+                    'quantity' => $qty,
                     'amount' => $item->total_amount,
                     'booking_id' => $booking->id,
                 ];
@@ -69,14 +71,13 @@ class ReportController extends Controller
                 'total_amount' => round($items->sum('amount'), 2),
                 'bookings_count' => $bookingIds->count(),
             ];
-        })->sortByDesc('total_amount')->values();
+        })->sortByDesc('total_amount')->values()->toArray();
 
-        // Donations
+        // Donations (filter by donation_date)
         $donations = Donation::where('temple_id', $templeId)
-            ->whereBetween('donation_date', [$startDate, $endDate])
+            ->whereBetween('donation_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['donationHead:id,name', 'assetType:id,name'])
             ->orderBy('donation_date')
-            ->orderBy('created_at')
             ->get()
             ->map(function ($donation) {
                 return [
@@ -96,12 +97,11 @@ class ReportController extends Controller
 
         // EXPENSE SECTION
 
-        // Purchases
+        // Purchases (filter by purchase_date)
         $purchases = Purchase::where('temple_id', $templeId)
-            ->whereBetween('purchase_date', [$startDate, $endDate])
+            ->whereBetween('purchase_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['vendor:id,name', 'category:id,name', 'purpose:id,name'])
             ->orderBy('purchase_date')
-            ->orderBy('created_at')
             ->get()
             ->map(function ($purchase) {
                 return [
@@ -119,12 +119,11 @@ class ReportController extends Controller
                 ];
             });
 
-        // Expenses
+        // Expenses (filter by expense_date)
         $expenses = Expense::where('temple_id', $templeId)
-            ->whereBetween('expense_date', [$startDate, $endDate])
+            ->whereBetween('expense_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['category:id,name'])
             ->orderBy('expense_date')
-            ->orderBy('created_at')
             ->get()
             ->map(function ($expense) {
                 return [
@@ -140,9 +139,9 @@ class ReportController extends Controller
                 ];
             });
 
-        // Employee Salaries
+        // Employee Salaries (filter by payment_date)
         $salaries = EmployeeSalary::where('temple_id', $templeId)
-            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->whereBetween('payment_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('payment_status', 'paid')
             ->with(['employee:id,name,employee_code'])
             ->orderBy('payment_date')
@@ -161,9 +160,9 @@ class ReportController extends Controller
                 ];
             });
 
-        // Employee Other Payments
+        // Employee Other Payments (filter by payment_date)
         $employeePayments = EmployeePayment::where('temple_id', $templeId)
-            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->whereBetween('payment_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['employee:id,name,employee_code'])
             ->orderBy('payment_date')
             ->get()
@@ -180,7 +179,7 @@ class ReportController extends Controller
             });
 
         // Calculate totals
-        $totalBookingAmount = $bookings->sum('total_amount');
+        $totalBookingAmount = array_sum(array_column($bookings, 'total_amount'));
         $totalBookingPaid = $bookingsQuery->sum('paid_amount');
         $totalDonationAmount = $donations->where('donation_type', 'financial')->sum('amount');
         $totalDonationAssetValue = $donations->where('donation_type', 'asset')->sum('estimated_value');
@@ -206,12 +205,12 @@ class ReportController extends Controller
                 'income' => [
                     'bookings' => [
                         'data' => $bookings,
-                        'count' => $bookings->count(),
+                        'count' => count($bookings),
                         'total_amount' => round($totalBookingAmount, 2),
                         'total_paid' => round($totalBookingPaid, 2),
                     ],
                     'donations' => [
-                        'data' => $donations,
+                        'data' => $donations->values()->toArray(),
                         'count' => $donations->count(),
                         'financial_count' => $donations->where('donation_type', 'financial')->count(),
                         'asset_count' => $donations->where('donation_type', 'asset')->count(),
@@ -223,24 +222,24 @@ class ReportController extends Controller
                 ],
                 'expenses' => [
                     'purchases' => [
-                        'data' => $purchases,
+                        'data' => $purchases->values()->toArray(),
                         'count' => $purchases->count(),
                         'total_amount' => round($totalPurchaseAmount, 2),
                         'total_paid' => round($totalPurchasePaid, 2),
                     ],
                     'expenses' => [
-                        'data' => $expenses,
+                        'data' => $expenses->values()->toArray(),
                         'count' => $expenses->count(),
                         'total_amount' => round($totalExpenseAmount, 2),
                         'total_paid' => round($totalExpensePaid, 2),
                     ],
                     'salaries' => [
-                        'data' => $salaries,
+                        'data' => $salaries->values()->toArray(),
                         'count' => $salaries->count(),
                         'total_paid' => round($totalSalaryPaid, 2),
                     ],
                     'employee_payments' => [
-                        'data' => $employeePayments,
+                        'data' => $employeePayments->values()->toArray(),
                         'count' => $employeePayments->count(),
                         'total_paid' => round($totalEmployeePayments, 2),
                     ],

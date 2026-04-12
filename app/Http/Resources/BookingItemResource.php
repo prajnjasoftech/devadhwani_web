@@ -39,6 +39,7 @@ class BookingItemResource extends JsonResource
             // Pricing
             'unit_amount' => $this->unit_amount,
             'unit_amount_formatted' => '₹' . number_format($this->unit_amount, 2),
+            'quantity' => $this->quantity ?? 1,
             'beneficiary_count' => $this->beneficiary_count,
             'occurrence_count' => $this->occurrence_count,
             'total_amount' => $this->total_amount,

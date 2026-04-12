@@ -9,7 +9,10 @@ defineProps({
     default: () => [],
   },
   loading: Boolean,
+  clickable: Boolean,
 });
+
+const emit = defineEmits(['row-click']);
 </script>
 
 <template>
@@ -44,7 +47,14 @@ defineProps({
             No data available
           </td>
         </tr>
-        <tr v-else v-for="(row, index) in data" :key="index" class="hover:bg-gray-50">
+        <tr
+          v-else
+          v-for="(row, index) in data"
+          :key="index"
+          class="hover:bg-gray-50"
+          :class="{ 'cursor-pointer': clickable }"
+          @click="clickable && emit('row-click', row)"
+        >
           <td
             v-for="column in columns"
             :key="column.key"

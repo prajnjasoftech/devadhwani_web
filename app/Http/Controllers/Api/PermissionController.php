@@ -12,10 +12,11 @@ class PermissionController extends Controller
     {
         $user = auth()->user();
 
-        // Temple users can see/assign ALL permissions EXCEPT temples
-        // Temples module is exclusively managed by Platform Admin
+        // Temple users can see/assign permissions EXCEPT:
+        // - temples: Platform Admin only
+        // - dashboard: Doesn't need permission (available to all)
         if ($user->isTempleUser()) {
-            $permissions = Permission::where('module_key', '!=', 'temples')
+            $permissions = Permission::whereNotIn('module_key', ['temples', 'dashboard'])
                 ->get()
                 ->groupBy('module_key')
                 ->map(function ($group, $moduleKey) {

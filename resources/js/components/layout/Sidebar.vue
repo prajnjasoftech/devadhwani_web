@@ -85,16 +85,23 @@ const navigation = computed(() => {
     items.push({ name: 'Roles', href: '/roles', icon: ShieldCheckIcon, permission: 'roles.read' });
   }
 
+  // Accounts & Ledger - role-based permissions
+  if (authStore.hasPermission('accounts.read')) {
+    items.push({ name: 'Accounts', href: '/accounts', icon: WalletIcon, permission: 'accounts.read' });
+  }
+
+  if (authStore.hasPermission('ledger.read')) {
+    items.push({ name: 'Ledger', href: '/ledger', icon: DocumentTextIcon, permission: 'ledger.read' });
+  }
+
   // Calendar - available to all temple users
   items.push({ name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon, permission: null });
 
   // Reports - available to all temple users
   items.push({ name: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon, permission: null });
 
-  // Temple Settings, Accounts & Ledger - only for Super Admin (system role)
+  // Temple Settings - only for Super Admin (system role)
   if (authStore.user?.role?.is_system_role) {
-    items.push({ name: 'Accounts', href: '/accounts', icon: WalletIcon, permission: null });
-    items.push({ name: 'Ledger', href: '/ledger', icon: DocumentTextIcon, permission: null });
     items.push({ name: 'Temple Settings', href: '/temple-settings', icon: Cog6ToothIcon, permission: null });
   }
 

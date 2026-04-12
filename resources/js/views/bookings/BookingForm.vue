@@ -33,7 +33,6 @@ const showDropdown = ref({});
 
 // Form data
 const form = ref({
-  booking_date: new Date().toISOString().split('T')[0],
   pooja_id: '',
   deity_id: '',
   frequency: 'once',
@@ -398,8 +397,7 @@ const resetForm = (keepContact = false) => {
   };
 
   form.value = {
-    booking_date: new Date().toISOString().split('T')[0],
-    pooja_id: '',
+      pooja_id: '',
     deity_id: '',
     frequency: 'once',
     weekly_day: null,
@@ -440,7 +438,6 @@ const handleSubmit = async () => {
   try {
     // Backend automatically creates/links devotees via BookingService
     const submitData = {
-      booking_date: form.value.booking_date,
       contact_name: form.value.contact_name || null,
       contact_number: form.value.contact_number || null,
       contact_address: form.value.contact_address || null,
@@ -507,13 +504,6 @@ onMounted(async () => {
       <!-- Pooja Selection -->
       <Card title="Pooja Details">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Input
-            v-model="form.booking_date"
-            label="Booking Date"
-            type="date"
-            required
-            :error="errors.booking_date?.[0]"
-          />
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Pooja *</label>
             <select

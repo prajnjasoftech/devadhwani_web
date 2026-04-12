@@ -82,16 +82,20 @@ class DashboardController extends Controller
             ? Carbon::parse($request->end_date)
             : Carbon::now()->endOfMonth();
 
-        // Get ledger entries for the period
+        // Get ledger entries for the period (exclude transfers and adjustments from totals)
+        $excludeTypes = ['transfer', 'adjustment', 'opening_balance'];
+
         $ledgerQuery = LedgerEntry::where('temple_id', $templeId)
-            ->whereBetween('entry_date', [$startDate, $endDate]);
+            ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereNotIn('source_type', $excludeTypes);
 
         $totalCredits = (clone $ledgerQuery)->credits()->sum('amount');
         $totalDebits = (clone $ledgerQuery)->debits()->sum('amount');
 
-        // Breakdown by source type
+        // Breakdown by source type (only actual income/expense types)
         $creditsBySource = LedgerEntry::where('temple_id', $templeId)
             ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereNotIn('source_type', $excludeTypes)
             ->credits()
             ->select('source_type', DB::raw('SUM(amount) as total'))
             ->groupBy('source_type')
@@ -99,6 +103,7 @@ class DashboardController extends Controller
 
         $debitsBySource = LedgerEntry::where('temple_id', $templeId)
             ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereNotIn('source_type', $excludeTypes)
             ->debits()
             ->select('source_type', DB::raw('SUM(amount) as total'))
             ->groupBy('source_type')
@@ -148,14 +153,12 @@ class DashboardController extends Controller
                 'income_by_source' => [
                     'booking' => round($creditsBySource['booking'] ?? 0, 2),
                     'donation' => round($creditsBySource['donation'] ?? 0, 2),
-                    'other' => round(($creditsBySource['transfer'] ?? 0) + ($creditsBySource['adjustment'] ?? 0), 2),
                 ],
                 'expense_by_source' => [
                     'purchase' => round($debitsBySource['purchase'] ?? 0, 2),
                     'expense' => round($debitsBySource['expense'] ?? 0, 2),
                     'salary' => round($debitsBySource['salary'] ?? 0, 2),
                     'employee_payment' => round($debitsBySource['employee_payment'] ?? 0, 2),
-                    'other' => round(($debitsBySource['transfer'] ?? 0) + ($debitsBySource['adjustment'] ?? 0), 2),
                 ],
                 'counts' => [
                     'bookings' => $bookingsCount,
@@ -190,9 +193,12 @@ class DashboardController extends Controller
             ? Carbon::parse($request->end_date)
             : Carbon::now()->endOfMonth();
 
-        // Daily income/expense for the month
+        // Daily income/expense for the month (exclude transfers and adjustments)
+        $excludeTypes = ['transfer', 'adjustment', 'opening_balance'];
+
         $dailyData = LedgerEntry::where('temple_id', $templeId)
             ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereNotIn('source_type', $excludeTypes)
             ->select(
                 'entry_date',
                 'type',
@@ -224,10 +230,12 @@ class DashboardController extends Controller
         }
 
         // Income by account (use withoutGlobalScope to avoid ambiguous temple_id in JOIN)
+        // Exclude transfers and adjustments
         $incomeByAccount = LedgerEntry::withoutGlobalScope('temple')
             ->where('ledger_entries.temple_id', $templeId)
             ->whereBetween('ledger_entries.entry_date', [$startDate, $endDate])
             ->where('ledger_entries.type', 'credit')
+            ->whereNotIn('ledger_entries.source_type', $excludeTypes)
             ->join('accounts', 'ledger_entries.account_id', '=', 'accounts.id')
             ->select('accounts.account_name', 'accounts.account_type', DB::raw('SUM(ledger_entries.amount) as total'))
             ->groupBy('accounts.id', 'accounts.account_name', 'accounts.account_type')

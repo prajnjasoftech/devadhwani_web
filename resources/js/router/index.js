@@ -295,32 +295,32 @@ const routes = [
         path: 'accounts',
         name: 'accounts',
         component: () => import('@/views/accounts/AccountList.vue'),
-        meta: { templeUserOnly: true, superAdminOnly: true },
+        meta: { permission: 'accounts.read', templeUserOnly: true },
       },
       {
         path: 'accounts/setup',
         name: 'accounts.setup',
         component: () => import('@/views/accounts/AccountSetup.vue'),
-        meta: { templeUserOnly: true, superAdminOnly: true },
+        meta: { permission: 'accounts.create', templeUserOnly: true },
       },
       // Ledger
       {
         path: 'ledger',
         name: 'ledger',
         component: () => import('@/views/ledger/LedgerList.vue'),
-        meta: { templeUserOnly: true, superAdminOnly: true },
+        meta: { permission: 'ledger.read', templeUserOnly: true },
       },
       {
         path: 'ledger/statement',
         name: 'ledger.statement',
         component: () => import('@/views/ledger/AccountStatement.vue'),
-        meta: { templeUserOnly: true, superAdminOnly: true },
+        meta: { permission: 'ledger.read', templeUserOnly: true },
       },
       {
         path: 'ledger/balance-sheet',
         name: 'ledger.balance-sheet',
         component: () => import('@/views/ledger/BalanceSheet.vue'),
-        meta: { templeUserOnly: true, superAdminOnly: true },
+        meta: { permission: 'ledger.read', templeUserOnly: true },
       },
       // Calendar
       {

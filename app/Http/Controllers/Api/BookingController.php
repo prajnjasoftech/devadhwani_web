@@ -19,7 +19,7 @@ class BookingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Booking::query()
-            ->with(['items.pooja', 'items.deity', 'creator'])
+            ->with(['items.pooja', 'items.deity', 'items.beneficiaries', 'creator'])
             ->withCount('items')
             ->search($request->search);
 
@@ -235,10 +235,10 @@ class BookingController extends Controller
                 'outstanding' => [
                     'count' => Booking::where('temple_id', $templeId)
                         ->where('balance_amount', '>', 0)
-                        ->where('booking_status', 'confirmed')->count(),
+                        ->where('booking_status', '!=', 'cancelled')->count(),
                     'amount' => Booking::where('temple_id', $templeId)
                         ->where('balance_amount', '>', 0)
-                        ->where('booking_status', 'confirmed')->sum('balance_amount'),
+                        ->where('booking_status', '!=', 'cancelled')->sum('balance_amount'),
                 ],
             ],
         ]);

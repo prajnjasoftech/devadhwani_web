@@ -120,7 +120,15 @@ class Booking extends Model
         return $query->where(function ($q) use ($search) {
             $q->where('booking_number', 'like', "%{$search}%")
               ->orWhere('contact_name', 'like', "%{$search}%")
-              ->orWhere('contact_number', 'like', "%{$search}%");
+              ->orWhere('contact_number', 'like', "%{$search}%")
+              // Search by pooja name
+              ->orWhereHas('items.pooja', function ($poojaQuery) use ($search) {
+                  $poojaQuery->where('name', 'like', "%{$search}%");
+              })
+              // Search by devotee/beneficiary name
+              ->orWhereHas('items.beneficiaries', function ($beneficiaryQuery) use ($search) {
+                  $beneficiaryQuery->where('name', 'like', "%{$search}%");
+              });
         });
     }
 

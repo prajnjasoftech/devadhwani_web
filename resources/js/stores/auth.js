@@ -32,6 +32,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.data.success) {
         token.value = response.data.data.token;
         user.value = response.data.data.user;
+        // Add permissions to user object from login response
+        user.value.permissions = response.data.data.permissions || [];
         localStorage.setItem('token', token.value);
         return { success: true, mustResetPassword: response.data.data.must_reset_password };
       }

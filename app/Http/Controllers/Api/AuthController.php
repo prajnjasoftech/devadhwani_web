@@ -42,13 +42,17 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        // Load role.permissions so getPermissions() works correctly
+        $user->load('role.permissions', 'temple');
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'user' => new UserResource($user->load('role', 'temple')),
+                'user' => new UserResource($user),
                 'token' => $token,
                 'must_reset_password' => $user->must_reset_password,
+                'permissions' => $user->getPermissions(),
             ],
         ]);
     }
