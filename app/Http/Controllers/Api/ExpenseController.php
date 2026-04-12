@@ -82,6 +82,12 @@ class ExpenseController extends Controller
         // Validate sufficient balance before creating expense
         if (($validated['paid_amount'] ?? 0) > 0 && !empty($validated['account_id'])) {
             $account = \App\Models\Account::find($validated['account_id']);
+            if (!$account) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected account not found.',
+                ], 422);
+            }
             if ($account->current_balance < $validated['paid_amount']) {
                 return response()->json([
                     'success' => false,

@@ -21,19 +21,20 @@ const bookings = ref([]);
 const loading = ref(true);
 const search = ref('');
 const paymentStatus = ref('');
+const dateFrom = ref('');
+const dateTo = ref('');
 const currentPage = ref(1);
 const meta = ref({});
 const stats = ref(null);
 
 const columns = [
-  { key: 'booking_number', label: 'Booking #' },
-  { key: 'booking_date', label: 'Date' },
-  { key: 'contact_name', label: 'Contact' },
-  { key: 'items', label: 'Items' },
-  { key: 'total_amount', label: 'Total' },
+  { key: 'date', label: 'Date' },
+  { key: 'pooja', label: 'Pooja' },
+  { key: 'quantity', label: 'Qty / Devotees' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'amount', label: 'Amount' },
   { key: 'balance', label: 'Balance' },
-  { key: 'payment_status', label: 'Status' },
-  { key: 'actions', label: 'Actions', class: 'text-right' },
+  { key: 'actions', label: '', class: 'text-right' },
 ];
 
 const paymentStatuses = [
@@ -137,6 +138,10 @@ const addPayment = async () => {
   } catch (error) {
     if (error.response?.status === 422) {
       paymentErrors.value = error.response.data.errors || {};
+      // Show message if no field-specific errors (e.g., insufficient balance)
+      if (error.response.data.message && !error.response.data.errors) {
+        uiStore.showToast(error.response.data.message, 'error');
+      }
     } else {
       uiStore.showToast('Failed to add payment', 'error');
     }
@@ -161,6 +166,8 @@ const fetchBookings = async () => {
       page: currentPage.value,
       search: search.value || undefined,
       payment_status: paymentStatus.value || undefined,
+      date_from: dateFrom.value || undefined,
+      date_to: dateTo.value || undefined,
     };
 
     const response = await api.get('/bookings', { params });
@@ -182,7 +189,7 @@ const getStatusColor = (status) => {
   }
 };
 
-watch([search, paymentStatus], () => {
+watch([search, paymentStatus, dateFrom, dateTo], () => {
   currentPage.value = 1;
   fetchBookings();
 });
@@ -244,63 +251,95 @@ onMounted(() => {
     </div>
 
     <Card>
-      <div class="flex flex-col sm:flex-row gap-4 mb-6">
+      <div class="flex flex-wrap items-center gap-3 mb-6">
         <input
           v-model="search"
           type="text"
-          placeholder="Search by booking #, name, phone..."
-          class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          placeholder="Search..."
+          class="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
         <select
           v-model="paymentStatus"
-          class="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option v-for="status in paymentStatuses" :key="status.value" :value="status.value">
             {{ status.label }}
           </option>
         </select>
+        <div class="flex items-center gap-2">
+          <input
+            v-model="dateFrom"
+            type="date"
+            class="px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <span class="text-gray-400">-</span>
+          <input
+            v-model="dateTo"
+            type="date"
+            class="px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <button
+            v-if="dateFrom || dateTo"
+            @click="dateFrom = ''; dateTo = ''"
+            class="text-xs text-primary-600 hover:text-primary-800"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
-      <Table :columns="columns" :data="bookings" :loading="loading">
-        <template #booking_number="{ row }">
-          <span class="font-mono font-medium text-primary-600">{{ row.booking_number }}</span>
+      <Table :columns="columns" :data="bookings" :loading="loading" clickable @row-click="(row) => router.push(`/bookings/${row.id}`)">
+        <template #date="{ row }">
+          <span class="text-sm text-gray-600">{{ row.booking_date_formatted }}</span>
         </template>
 
-        <template #booking_date="{ row }">
-          {{ row.booking_date_formatted }}
-        </template>
-
-        <template #contact_name="{ row }">
-          <div>
-            <p class="font-medium">{{ row.contact_name }}</p>
-            <p class="text-xs text-gray-500">{{ row.contact_number || 'No phone' }}</p>
+        <template #pooja="{ row }">
+          <div class="max-w-xs">
+            <div v-for="(item, idx) in row.items?.slice(0, 2)" :key="idx" class="text-sm">
+              <span class="font-medium">{{ item.pooja?.name || 'Unknown Pooja' }}</span>
+              <span v-if="item.deity" class="text-gray-500 text-xs"> - {{ item.deity.name }}</span>
+            </div>
+            <div v-if="row.items?.length > 2" class="text-xs text-gray-400">
+              +{{ row.items.length - 2 }} more
+            </div>
+            <div v-if="!row.items?.length" class="text-gray-400 text-sm">No items</div>
           </div>
         </template>
 
-        <template #items="{ row }">
-          <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-            {{ row.items_count }} {{ row.items_count === 1 ? 'item' : 'items' }}
+        <template #quantity="{ row }">
+          <div class="text-sm">
+            <div v-for="(item, idx) in row.items?.slice(0, 2)" :key="idx">
+              <!-- Show quantity for quantity-based poojas, beneficiary_count for devotee-based -->
+              <span class="font-medium">{{ item.quantity > 1 ? item.quantity : (item.beneficiary_count || 1) }}</span>
+              <span v-if="item.beneficiaries?.length" class="text-gray-500 text-xs ml-1">
+                ({{ item.beneficiaries.map(b => b.name).slice(0, 2).join(', ') }}<span v-if="item.beneficiaries.length > 2">...</span>)
+              </span>
+            </div>
+            <div v-if="row.items?.length > 2" class="text-xs text-gray-400">...</div>
+          </div>
+        </template>
+
+        <template #contact="{ row }">
+          <div>
+            <p class="font-medium text-sm">{{ row.contact_name || '-' }}</p>
+            <p class="text-xs text-gray-500">{{ row.contact_number || '-' }}</p>
+          </div>
+        </template>
+
+        <template #amount="{ row }">
+          <span :class="['font-medium', row.payment_status === 'paid' ? 'text-green-600' : 'text-red-600']">
+            {{ row.total_amount_formatted }}
           </span>
         </template>
 
-        <template #total_amount="{ row }">
-          <span class="font-medium">{{ row.total_amount_formatted }}</span>
-        </template>
-
         <template #balance="{ row }">
-          <span :class="row.balance_amount > 0 ? 'text-red-600 font-medium' : 'text-green-600'">
+          <span :class="['font-medium', row.balance_amount > 0 ? 'text-red-600' : 'text-green-600']">
             {{ row.balance_amount_formatted }}
           </span>
         </template>
 
-        <template #payment_status="{ row }">
-          <span :class="['px-2 py-1 text-xs font-medium rounded-full', getStatusColor(row.payment_status)]">
-            {{ row.payment_status_label }}
-          </span>
-        </template>
-
         <template #actions="{ row }">
-          <div class="flex items-center justify-end gap-2">
+          <div class="flex items-center justify-end gap-2" @click.stop>
             <Button
               v-if="row.balance_amount > 0 && authStore.hasPermission('bookings.update')"
               variant="ghost"
@@ -308,7 +347,7 @@ onMounted(() => {
               title="Add Payment"
               @click="openPaymentModal(row)"
             >
-              <CurrencyRupeeIcon class="w-4 h-4 text-green-600" />
+              <CurrencyRupeeIcon class="w-4 h-4 text-gray-900" />
             </Button>
             <Button
               variant="ghost"

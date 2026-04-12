@@ -140,6 +140,10 @@ const handlePayment = async () => {
   } catch (error) {
     if (error.response?.status === 422) {
       paymentErrors.value = error.response.data.errors || {};
+      // Show message if no field-specific errors (e.g., insufficient balance)
+      if (error.response.data.message && !error.response.data.errors) {
+        uiStore.showToast(error.response.data.message, 'error');
+      }
     } else {
       uiStore.showToast('Failed to process payment', 'error');
     }

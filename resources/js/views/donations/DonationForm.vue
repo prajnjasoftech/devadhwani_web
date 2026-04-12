@@ -376,14 +376,6 @@ onMounted(async () => {
       <!-- Donor Details -->
       <Card title="Donor Details">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Input
-            v-model="form.donation_date"
-            label="Donation Date"
-            type="date"
-            required
-            :error="errors.donation_date?.[0]"
-          />
-
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block text-sm font-medium text-gray-700">Donation Head *</label>

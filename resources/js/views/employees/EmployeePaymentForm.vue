@@ -140,6 +140,10 @@ const handleSubmit = async () => {
   } catch (error) {
     if (error.response?.status === 422) {
       errors.value = error.response.data.errors || {};
+      // Show message if no field-specific errors (e.g., insufficient balance)
+      if (error.response.data.message && !error.response.data.errors) {
+        uiStore.showToast(error.response.data.message, 'error');
+      }
     } else {
       uiStore.showToast('Failed to save payment', 'error');
     }
@@ -215,13 +219,6 @@ onMounted(async () => {
             </select>
             <p v-if="errors.employee_id" class="mt-1 text-sm text-red-600">{{ errors.employee_id[0] }}</p>
           </div>
-          <Input
-            v-model="form.payment_date"
-            label="Payment Date *"
-            type="date"
-            required
-            :error="errors.payment_date?.[0]"
-          />
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Payment Type *</label>
             <select

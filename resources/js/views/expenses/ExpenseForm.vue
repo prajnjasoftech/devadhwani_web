@@ -191,6 +191,10 @@ const handleSubmit = async () => {
   } catch (error) {
     if (error.response?.status === 422) {
       errors.value = error.response.data.errors || {};
+      // Show message if no field-specific errors (e.g., insufficient balance)
+      if (error.response.data.message && !error.response.data.errors) {
+        uiStore.showToast(error.response.data.message, 'error');
+      }
     } else {
       uiStore.showToast('Failed to save expense', 'error');
     }
@@ -267,15 +271,7 @@ onMounted(async () => {
     <form v-else @submit.prevent="handleSubmit" class="space-y-6">
       <!-- Expense Details -->
       <Card title="Expense Details">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Input
-            v-model="form.expense_date"
-            label="Expense Date"
-            type="date"
-            required
-            :error="errors.expense_date?.[0]"
-          />
-
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block text-sm font-medium text-gray-700">Category *</label>

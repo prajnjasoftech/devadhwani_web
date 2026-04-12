@@ -26,7 +26,7 @@ class BookingService
             // Create the booking
             $booking = Booking::create([
                 'temple_id' => auth()->user()->temple_id,
-                'booking_date' => $data['booking_date'] ?? now()->toDateString(),
+                'booking_date' => now()->toDateString(), // Always use current date
                 'contact_name' => $data['contact_name'] ?? null,
                 'contact_number' => $data['contact_number'] ?? null,
                 'contact_email' => $data['contact_email'] ?? null,
@@ -303,6 +303,13 @@ class BookingService
                         'completed_at' => $schedule->completed_at?->toISOString(),
                         'completed_at_formatted' => $schedule->completed_at?->format('h:i A'),
                         'beneficiaries' => $schedule->bookingItem->beneficiaries->pluck('name')->toArray(),
+                        'beneficiaries_with_nakshatra' => $schedule->bookingItem->beneficiaries->map(function ($b) {
+                            return [
+                                'name' => $b->name,
+                                'nakshathra' => $b->nakshathra?->malayalam_name ?? $b->nakshathra?->name ?? null,
+                            ];
+                        })->toArray(),
+                        'quantity' => $schedule->bookingItem->quantity,
                     ];
                 })->values(),
             ];

@@ -35,6 +35,7 @@ const labelMap = {
   'employees': 'Employees',
   'salaries': 'Salaries',
   'payments': 'Payments',
+  'reports': 'Reports',
   'create': 'New',
   'new': 'New',
   'edit': 'Edit',
@@ -98,7 +99,7 @@ function navigate(crumb) {
 </script>
 
 <template>
-  <nav v-if="breadcrumbs.length > 0" class="flex items-center text-sm text-gray-500 mb-4">
+  <nav v-if="breadcrumbs.length > 0" aria-label="Breadcrumb" class="flex items-center text-sm text-gray-500 mb-4 print:hidden">
     <router-link to="/" class="flex items-center hover:text-primary-600 transition-colors">
       <HomeIcon class="w-4 h-4" />
     </router-link>

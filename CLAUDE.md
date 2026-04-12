@@ -95,7 +95,22 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Auto-generated entry numbers: `{TEMPLE_CODE}/LED/YYYYMM/0001`
 - **Super Admin Only**: Only temple Super Admin can access ledger
 
-### 15. Calendar (Malayalam Panchang)
+### 15. Reports
+- **Daily Report**: Income and expense summary for selected date range
+- **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, Custom Range
+- **Income Summary**: Bookings (pooja-wise), Donations
+- **Expense Summary**: Purchases, Other Expenses, Salaries, Employee Payments
+- **Print Support**: Thermal printer friendly output with temple name header
+- **Empty Section Hiding**: Sections with no data are hidden automatically
+
+### 16. Daily Poojas
+- **Simplified View**: Shows devotees with nakshatra (no booking details)
+- **Thermal Printer Print**: Compact format for priest's daily schedule
+- **Batch Complete**: Select multiple poojas and mark as completed
+- **Status Tracking**: Pending/Completed counts per pooja
+- **Quantity Display**: Shows quantity if no devotee names provided
+
+### 17. Calendar (Malayalam Panchang)
 - **Monthly Calendar View**: Interactive calendar grid with navigation
 - **Malayalam Date Display**: Shows Kolla Varsham date for each day
 - **Panchang Details**: Click any date to view full Panchang information
@@ -151,6 +166,10 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Consistent action icons: PencilIcon (edit), NoSymbolIcon/CheckCircleIcon (toggle status)
 - Cards with sections for form organization
 - Table with custom slot templates
+- **Date Fields**: Forms default to today's date (no date input shown for Purchase, Expense, Donation, Employee Payment)
+- **Print Support**: `print:hidden` class hides elements during print; `hidden print:block` shows print-only elements
+- **Error Handling**: Insufficient balance errors show toast notification
+- **Footer**: "Powered by Prajnja Softech LLP" in app footer and print outputs
 
 ## Routes Pattern
 ```

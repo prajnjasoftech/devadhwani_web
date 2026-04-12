@@ -55,3 +55,51 @@
         transform: rotate(360deg);
     }
 }
+
+/* Print styles - hide sidebar and navbar */
+@media print {
+    /* Hide sidebar */
+    aside.fixed {
+        display: none !important;
+    }
+
+    /* Hide navbar */
+    nav.bg-white,
+    header {
+        display: none !important;
+    }
+
+    /* Hide breadcrumb */
+    nav[aria-label="Breadcrumb"] {
+        display: none !important;
+    }
+
+    /* Hide footer */
+    footer {
+        display: none !important;
+    }
+
+    /* Remove margin from main content */
+    .lg\:ml-64,
+    .lg\:ml-20 {
+        margin-left: 0 !important;
+    }
+
+    /* Make content full width */
+    main {
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Ensure backgrounds print */
+    body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Avoid page breaks inside cards */
+    .card {
+        break-inside: avoid;
+    }
+}

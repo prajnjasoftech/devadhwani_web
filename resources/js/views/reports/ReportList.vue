@@ -34,8 +34,13 @@ const selectedFilter = ref('today');
 const customStartDate = ref('');
 const customEndDate = ref('');
 
-// Helper to format date as YYYY-MM-DD
-const formatDate = (date) => date.toISOString().split('T')[0];
+// Helper to format date as YYYY-MM-DD (using local time, not UTC)
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // Computed date range based on selected filter
 const dateRange = computed(() => {
@@ -173,7 +178,7 @@ onMounted(fetchReport);
 
     <!-- Print Header (only visible when printing) -->
     <div class="print-header hidden print:block mb-6">
-      <h1 class="text-2xl font-bold text-center">{{ authStore.user?.temple?.name || 'Temple' }}</h1>
+      <h1 class="text-2xl font-bold text-center">{{ authStore.user?.temple?.temple_name || 'Temple' }}</h1>
       <h2 class="text-lg text-center text-gray-600">Daily Report</h2>
       <p class="text-center text-gray-500">{{ reportData?.period?.display }}</p>
     </div>
@@ -229,7 +234,7 @@ onMounted(fetchReport);
       </div>
 
       <!-- INCOME SECTION -->
-      <div class="mb-8">
+      <div v-if="reportData.income.bookings.data.length || reportData.income.donations.data.length" class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <ArrowTrendingUpIcon class="w-6 h-6 text-green-600" />
           Income
@@ -237,7 +242,7 @@ onMounted(fetchReport);
         </h2>
 
         <!-- Bookings -->
-        <Card class="mb-4">
+        <Card v-if="reportData.income.bookings.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <DocumentTextIcon class="w-5 h-5 text-indigo-600" />
@@ -247,7 +252,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-green-600">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.income.bookings.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -273,11 +278,10 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No bookings for this period</div>
         </Card>
 
         <!-- Donations -->
-        <Card>
+        <Card v-if="reportData.income.donations.data.length">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <CurrencyRupeeIcon class="w-5 h-5 text-purple-600" />
@@ -287,7 +291,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-green-600">₹{{ reportData.income.donations.total_amount.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.income.donations.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -329,12 +333,11 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No donations for this period</div>
         </Card>
       </div>
 
       <!-- EXPENSE SECTION -->
-      <div class="mb-8">
+      <div v-if="reportData.expenses.purchases.data.length || reportData.expenses.expenses.data.length || reportData.expenses.salaries.data.length || reportData.expenses.employee_payments.data.length" class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <ArrowTrendingDownIcon class="w-6 h-6 text-red-600" />
           Expenses
@@ -342,7 +345,7 @@ onMounted(fetchReport);
         </h2>
 
         <!-- Purchases -->
-        <Card class="mb-4">
+        <Card v-if="reportData.expenses.purchases.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
               Purchases
@@ -351,7 +354,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.purchases.total_paid.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.expenses.purchases.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -384,11 +387,10 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No purchases for this period</div>
         </Card>
 
         <!-- Expenses -->
-        <Card class="mb-4">
+        <Card v-if="reportData.expenses.expenses.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
               Other Expenses
@@ -397,7 +399,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.expenses.total_paid.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.expenses.expenses.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -428,11 +430,10 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No expenses for this period</div>
         </Card>
 
         <!-- Salaries -->
-        <Card class="mb-4">
+        <Card v-if="reportData.expenses.salaries.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
               Salaries Paid
@@ -441,7 +442,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.salaries.total_paid.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.expenses.salaries.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -473,11 +474,10 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No salaries paid in this period</div>
         </Card>
 
         <!-- Employee Payments -->
-        <Card>
+        <Card v-if="reportData.expenses.employee_payments.data.length">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
               Other Employee Payments
@@ -486,7 +486,7 @@ onMounted(fetchReport);
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.employee_payments.total_paid.toLocaleString() }}</span>
           </div>
 
-          <div v-if="reportData.expenses.employee_payments.data.length" class="overflow-x-auto">
+          <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
@@ -520,7 +520,6 @@ onMounted(fetchReport);
               </tfoot>
             </table>
           </div>
-          <div v-else class="text-center py-4 text-gray-400">No employee payments in this period</div>
         </Card>
       </div>
 
@@ -554,12 +553,24 @@ onMounted(fetchReport);
           </div>
         </div>
       </Card>
+
+      <!-- Print Footer - Powered By -->
+      <div class="hidden print:block mt-8 pt-4 border-t border-gray-200 text-center text-sm text-gray-500">
+        Powered by Prajnja Softech LLP
+      </div>
     </template>
   </div>
 </template>
 
 <style>
 @media print {
+  /* Hide browser default headers and footers */
+  @page {
+    margin: 10mm;
+    margin-top: 5mm;
+    margin-bottom: 5mm;
+  }
+
   .no-print {
     display: none !important;
   }
