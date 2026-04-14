@@ -291,6 +291,7 @@ class BookingService
                 'pooja_name' => $first->bookingItem->pooja->name,
                 'deity_id' => $first->bookingItem->deity?->id,
                 'deity_name' => $first->bookingItem->deity?->name ?? 'General',
+                'devotee_required' => (bool) $first->bookingItem->pooja->devotee_required,
                 'total_count' => $items->count(),
                 'pending_count' => $pendingCount,
                 'completed_count' => $completedCount,
@@ -314,6 +315,9 @@ class BookingService
                 })->values(),
             ];
         }
+
+        // Sort by deity name
+        usort($result, fn ($a, $b) => strcmp($a['deity_name'], $b['deity_name']));
 
         return $result;
     }

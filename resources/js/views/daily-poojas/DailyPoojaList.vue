@@ -147,6 +147,25 @@ const printSchedule = () => {
   window.print();
 };
 
+// Group poojas by deity for print view
+const poojasGroupedByDeity = computed(() => {
+  if (!data.value?.poojas) return [];
+
+  const groups = {};
+  data.value.poojas.forEach(pooja => {
+    const deityName = pooja.deity_name || 'General';
+    if (!groups[deityName]) {
+      groups[deityName] = [];
+    }
+    groups[deityName].push(pooja);
+  });
+
+  return Object.entries(groups).map(([deity, poojas]) => ({
+    deity,
+    poojas,
+  }));
+});
+
 watch(selectedDate, fetchSchedules);
 
 onMounted(fetchSchedules);
@@ -359,26 +378,22 @@ onMounted(fetchSchedules);
         <div class="text-sm">{{ formattedDate }}</div>
       </div>
 
-      <div v-for="pooja in data.poojas" :key="`print-${pooja.pooja_id}-${pooja.deity_id}`" class="mb-4 pb-2 border-b border-dashed border-gray-300">
-        <div class="font-bold">{{ pooja.pooja_name }}</div>
-        <div class="text-sm text-gray-600 mb-1">{{ pooja.deity_name }}</div>
+      <div v-for="group in poojasGroupedByDeity" :key="group.deity" class="mb-3">
+        <div class="font-bold border-b border-gray-300 mb-2">{{ group.deity }}</div>
 
-        <template v-for="(schedule, idx) in pooja.schedules.filter(s => s.status === 'pending')" :key="schedule.id">
-          <div class="text-sm pl-2">
-            <template v-if="schedule.beneficiaries_with_nakshatra?.length">
-              <div v-for="(ben, bIdx) in schedule.beneficiaries_with_nakshatra" :key="bIdx" class="flex justify-between">
+        <div v-for="pooja in group.poojas" :key="`print-${pooja.pooja_id}-${pooja.deity_id}`" class="mb-2 pl-2">
+          <!-- If devotee_required: show pooja name then names and nakshatras -->
+          <template v-if="pooja.devotee_required">
+            <div class="font-semibold">{{ pooja.pooja_name }}</div>
+            <template v-for="schedule in pooja.schedules" :key="schedule.id">
+              <div v-for="(ben, bIdx) in schedule.beneficiaries_with_nakshatra" :key="bIdx" class="text-sm pl-2 flex justify-between">
                 <span>{{ ben.name }}</span>
                 <span v-if="ben.nakshathra" class="text-gray-600">{{ ben.nakshathra }}</span>
               </div>
             </template>
-            <div v-else class="text-gray-600">
-              Qty: {{ schedule.quantity || 1 }}
-            </div>
-          </div>
-        </template>
-
-        <div class="text-right text-xs text-gray-500 mt-1">
-          Total: {{ pooja.pending_count }} pending
+          </template>
+          <!-- If not devotee_required: show pooja name with count only -->
+          <div v-else class="font-semibold">{{ pooja.pooja_name }} ({{ pooja.total_count }})</div>
         </div>
       </div>
 
