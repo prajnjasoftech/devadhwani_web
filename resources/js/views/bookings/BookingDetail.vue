@@ -19,6 +19,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
+  PrinterIcon,
 } from '@heroicons/vue/24/outline';
 
 const route = useRoute();
@@ -159,10 +160,15 @@ const addPayment = async () => {
   paymentSaving.value = true;
 
   try {
-    await api.post(`/bookings/${route.params.id}/payments`, paymentForm.value);
+    const response = await api.post(`/bookings/${route.params.id}/payments`, paymentForm.value);
     uiStore.showToast('Payment added successfully', 'success');
     showPaymentModal.value = false;
+
+    // Fetch updated booking first, then print
     await fetchBooking();
+
+    // Print receipt for this payment
+    printPaymentReceipt(response.data.data.payment);
   } catch (error) {
     if (error.response?.status === 422) {
       paymentErrors.value = error.response.data.errors || {};
@@ -176,6 +182,94 @@ const addPayment = async () => {
   } finally {
     paymentSaving.value = false;
   }
+};
+
+// Print payment receipt
+const printPaymentReceipt = (payment) => {
+  const templeName = authStore.user?.temple?.temple_name || 'Temple';
+  const b = booking.value;
+
+  // Build pooja items HTML
+  let itemsHtml = '';
+  b.items?.forEach(item => {
+    itemsHtml += `
+      <div style="margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+          <span>${item.pooja?.name || ''}</span>
+          <span>${item.total_amount_formatted}</span>
+        </div>
+        <div style="font-size: 10px; color: #666; padding-left: 8px;">
+          ${item.deity?.name || ''}${item.quantity > 1 ? ' | Qty: ' + item.quantity : ''}
+        </div>
+        <div style="font-size: 10px; color: #666; padding-left: 8px;">
+          ${item.frequency === 'once' ? item.start_date_formatted : item.date_range + ' (' + item.frequency_label + ')'}
+        </div>
+        ${item.beneficiaries?.map(ben => `
+          <div style="font-size: 10px; padding-left: 8px; display: flex; justify-content: space-between;">
+            <span>${ben.name}</span>
+            <span style="color: #333; font-weight: 500;">${ben.nakshathra?.malayalam_name || ''}</span>
+          </div>
+        `).join('') || ''}
+      </div>
+    `;
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payment Receipt - ${b.booking_number}</title>
+      <style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: monospace; font-size: 12px; line-height: 1.4; width: 76mm; margin: 0; padding: 2mm; }
+        .header { text-align: center; border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
+        .header .title { font-size: 14px; font-weight: bold; }
+        .row { display: flex; justify-content: space-between; font-size: 11px; }
+        .section { border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
+        .bold { font-weight: bold; }
+        .footer { text-align: center; font-size: 10px; color: #666; margin-top: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="title">${templeName}</div>
+        <div>Payment Receipt</div>
+      </div>
+
+      <div class="section">
+        <div class="row"><span>Booking No:</span><span class="bold">${b.booking_number}</span></div>
+        <div class="row"><span>Date:</span><span>${payment.payment_date_formatted}</span></div>
+      </div>
+
+      <div class="section">
+        ${itemsHtml}
+      </div>
+
+      <div class="section">
+        <div class="row bold"><span>Amount Paid:</span><span>${payment.amount_formatted}</span></div>
+        <div class="row"><span>Method:</span><span style="text-transform: capitalize;">${payment.payment_method}</span></div>
+        ${payment.reference_number ? `<div class="row"><span>Reference:</span><span>${payment.reference_number}</span></div>` : ''}
+      </div>
+
+      <div class="section">
+        <div class="row"><span>Total Amount:</span><span>${b.total_amount_formatted}</span></div>
+        <div class="row"><span>Total Paid:</span><span>${b.paid_amount_formatted}</span></div>
+        ${b.balance_amount > 0 ? `<div class="row bold"><span>Balance:</span><span>${b.balance_amount_formatted}</span></div>` : ''}
+      </div>
+
+      <div class="footer">
+        <div>Thank you!</div>
+        <div>Powered by Prajnja Softech LLP</div>
+      </div>
+
+      ${'<'}script>window.onload = function() { window.print(); window.close(); }${'<'}/script>
+    ${'<'}/body>
+    ${'<'}/html>
+  `;
+
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  printWindow.document.write(html);
+  printWindow.document.close();
 };
 
 onMounted(fetchBooking);

@@ -60,6 +60,14 @@ class BookingController extends Controller
         try {
             $booking = $this->bookingService->createBooking($request->validated());
 
+            // Load relationships for receipt printing
+            $booking->load([
+                'items.pooja',
+                'items.deity',
+                'items.beneficiaries.nakshathra',
+                'items.schedules',
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Booking created successfully',

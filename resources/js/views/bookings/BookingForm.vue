@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUiStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/auth';
 import api from '@/composables/useApi';
 import { isValidIndianMobile } from '@/composables/useValidation';
 import Card from '@/components/ui/Card.vue';
@@ -9,10 +10,11 @@ import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
 import Select from '@/components/ui/Select.vue';
 import Modal from '@/components/ui/Modal.vue';
-import { PlusIcon, TrashIcon, CheckCircleIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, TrashIcon, CheckCircleIcon, PrinterIcon } from '@heroicons/vue/24/outline';
 
 const router = useRouter();
 const uiStore = useUiStore();
+const authStore = useAuthStore();
 
 // Data loading
 const loading = ref(true);
@@ -25,6 +27,102 @@ const accounts = ref([]);
 // Success state
 const showSuccessModal = ref(false);
 const createdBooking = ref(null);
+
+// Print receipt in new window
+const printReceipt = () => {
+  const booking = createdBooking.value;
+  if (!booking) return;
+
+  const templeName = authStore.user?.temple?.temple_name || 'Temple';
+
+  let itemsHtml = '';
+  booking.items?.forEach(item => {
+    itemsHtml += `
+      <div style="margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold;">
+          <span>${item.pooja?.name || ''}</span>
+          <span>${item.total_amount_formatted}</span>
+        </div>
+        <div style="font-size: 10px; color: #666; padding-left: 8px;">
+          ${item.deity?.name || ''}${item.quantity > 1 ? ' | Qty: ' + item.quantity : ''}
+        </div>
+        <div style="font-size: 10px; color: #666; padding-left: 8px;">
+          ${item.frequency === 'once' ? 'Date: ' + item.start_date_formatted : item.start_date_formatted + ' - ' + (item.end_date_formatted || '') + ' (' + item.frequency_label + ')'}
+        </div>
+        ${item.beneficiaries?.map(ben => `
+          <div style="font-size: 10px; padding-left: 8px; display: flex; justify-content: space-between;">
+            <span>${ben.name}</span>
+            <span style="color: #333; font-weight: 500;">${ben.nakshathra?.malayalam_name || ''}</span>
+          </div>
+        `).join('') || ''}
+      </div>
+    `;
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Receipt - ${booking.booking_number}</title>
+      <style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: monospace; font-size: 12px; line-height: 1.4; width: 76mm; margin: 0; padding: 2mm; }
+        .header { text-align: center; border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
+        .header .title { font-size: 14px; font-weight: bold; }
+        .row { display: flex; justify-content: space-between; font-size: 11px; }
+        .section { border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
+        .bold { font-weight: bold; }
+        .footer { text-align: center; font-size: 10px; color: #666; margin-top: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="title">${templeName}</div>
+        <div>Booking Receipt</div>
+      </div>
+
+      <div class="section">
+        <div class="row"><span>Receipt No:</span><span class="bold">${booking.booking_number}</span></div>
+        <div class="row"><span>Date:</span><span>${booking.booking_date_formatted}</span></div>
+        ${booking.contact_name ? `<div class="row"><span>Name:</span><span>${booking.contact_name}</span></div>` : ''}
+        ${booking.contact_number ? `<div class="row"><span>Phone:</span><span>${booking.contact_number}</span></div>` : ''}
+      </div>
+
+      <div class="section">
+        ${itemsHtml}
+      </div>
+
+      <div class="section">
+        <div class="row bold"><span>Total:</span><span>${booking.total_amount_formatted}</span></div>
+        <div class="row"><span>Paid:</span><span>${booking.paid_amount_formatted}</span></div>
+        ${booking.balance_amount > 0 ? `<div class="row bold"><span>Balance:</span><span>${booking.balance_amount_formatted}</span></div>` : ''}
+      </div>
+
+      <div class="footer">
+        <div>Thank you for your booking!</div>
+        <div>Powered by Prajnja Softech LLP</div>
+      </div>
+
+      ${'<'}script>window.onload = function() { window.print(); window.close(); }${'<'}/script>
+    ${'<'}/body>
+    ${'<'}/html>
+  `;
+
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
+// Auto-print when success modal opens
+watch(showSuccessModal, (show) => {
+  if (show && createdBooking.value) {
+    nextTick(() => {
+      setTimeout(() => {
+        printReceipt();
+      }, 500);
+    });
+  }
+});
 
 // Autocomplete state
 const searchResults = ref([]);
@@ -410,10 +508,22 @@ const resetForm = (keepContact = false) => {
     notes: '',
     payment_amount: 0,
     payment_method: 'cash',
+    account_id: '',
   };
   errors.value = {};
   searchResults.value = [];
   showDropdown.value = {};
+
+  // Re-trigger account selection and sync payment amount
+  nextTick(() => {
+    // Sync payment amount with total
+    form.value.payment_amount = totalAmount.value;
+    // Auto-select cash account
+    const cashAccount = accounts.value.find(a => a.account_type === 'cash');
+    if (cashAccount) {
+      form.value.account_id = cashAccount.id;
+    }
+  });
 };
 
 // View created booking
@@ -846,6 +956,10 @@ onMounted(async () => {
         </p>
       </div>
       <div class="flex flex-col gap-3 pt-4 border-t">
+        <Button variant="secondary" @click="printReceipt" class="w-full">
+          <PrinterIcon class="w-4 h-4 mr-2" />
+          Print Receipt
+        </Button>
         <div class="flex justify-center gap-3">
           <Button variant="outline" @click="createAnother(true)" class="flex-1">
             Same Contact
@@ -859,5 +973,6 @@ onMounted(async () => {
         </Button>
       </div>
     </Modal>
+
   </div>
 </template>
