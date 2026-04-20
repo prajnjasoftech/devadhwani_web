@@ -44,6 +44,9 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Devotee/beneficiary management
 - Payment tracking (partial/full)
 - Occurrence tracking (daily poojas)
+- **Receipt Printing**: Auto-print thermal receipt after booking creation
+- **Payment Receipt**: Auto-print receipt when adding payment to existing booking
+- Receipt shows: temple name, booking number, pooja items, beneficiaries with nakshatra, amounts
 
 ### 8. Purchase Management
 - **Vendors**: Supplier/vendor master with description field
@@ -185,7 +188,21 @@ php artisan migrate          # Run migrations
 php artisan db:seed          # Seed permissions + platform admin
 php artisan tinker           # Interactive shell
 npm run dev                  # Start Vite dev server
+npm run build                # Build for production
 ```
+
+## Deployment
+- **Build artifacts**: Committed to repo (`public/build/`) - no npm build needed on server
+- **Server**: Ubuntu on AWS (low RAM, cannot run npm build)
+- **Deploy steps**:
+  ```bash
+  # On server
+  cd /var/www/html/devadhwani
+  git checkout -- .
+  git pull origin master
+  php artisan config:cache
+  php artisan route:cache
+  ```
 
 ## Default Platform Admin
 - Contact: 9999999999
