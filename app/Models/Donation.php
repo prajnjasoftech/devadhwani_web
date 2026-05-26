@@ -39,6 +39,14 @@ class Donation extends Model
         'estimated_value' => 'decimal:2',
     ];
 
+    // Mutators - Auto Title Case for names
+    protected function donorName(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            set: fn ($value) => $value ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : $value,
+        );
+    }
+
     protected static function booted(): void
     {
         parent::booted();

@@ -23,3 +23,10 @@ Schedule::command('panchang:fetch')
     ->everyMinute()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/panchang-fetch.log'));
+
+// Process daily schedules - creates schedules for tomorrow and queues notifications
+// Run at midnight to process next day's schedules
+Schedule::command('schedules:process')
+    ->dailyAt('00:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/schedules-process.log'));

@@ -128,6 +128,7 @@ watch(showSuccessModal, (show) => {
 const searchResults = ref([]);
 const activeSearchIndex = ref(-1);
 const showDropdown = ref({});
+const contactNameAutoFilled = ref(true); // Track if contact name should sync with devotee name
 
 // Form data
 const form = ref({
@@ -135,6 +136,8 @@ const form = ref({
   deity_id: '',
   frequency: 'once',
   weekly_day: null,
+  monthly_type: 'same_date',
+  monthly_weekday: null,
   start_date: new Date().toISOString().split('T')[0],
   end_date: '',
   quantity: 1, // For poojas that don't require devotee details
@@ -158,6 +161,38 @@ const frequencies = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
 ];
+
+// First weekday options with Malayalam names
+const firstWeekdayOptions = [
+  { value: 0, malayalam: 'മുപ്പട്ട് ഞായർ', english: 'First Sunday' },
+  { value: 1, malayalam: 'മുപ്പട്ട് തിങ്കൾ', english: 'First Monday' },
+  { value: 2, malayalam: 'മുപ്പട്ട് ചൊവ്വ', english: 'First Tuesday' },
+  { value: 3, malayalam: 'മുപ്പട്ട് ബുധൻ', english: 'First Wednesday' },
+  { value: 4, malayalam: 'മുപ്പട്ട് വ്യാഴം', english: 'First Thursday' },
+  { value: 5, malayalam: 'മുപ്പട്ട് വെള്ളി', english: 'First Friday' },
+  { value: 6, malayalam: 'മുപ്പട്ട് ശനി', english: 'First Saturday' },
+];
+
+// Monthly type options
+const monthlyTypes = computed(() => {
+  const types = [
+    { value: 'same_date', label: 'Same Date Every Month (e.g., 15th)' },
+    { value: 'nakshatra', label: "On Devotee's Nakshatra" },
+  ];
+
+  // Add First [Weekday] options for Malayalam month
+  firstWeekdayOptions.forEach(day => {
+    types.push({
+      value: `malayalam_weekday_${day.value}`,
+      label: `${day.malayalam} (${day.english})`,
+      weekday: day.value,
+    });
+  });
+
+  types.push({ value: 'pooja_schedule', label: "Pooja's Fixed Schedule" });
+
+  return types;
+});
 
 // Malayalam days of week
 const malayalamDays = [
@@ -407,10 +442,65 @@ const onFrequencyChange = () => {
   if (form.value.frequency === 'once') {
     form.value.end_date = '';
     form.value.weekly_day = null;
+    form.value.monthly_type = 'same_date';
+    form.value.monthly_weekday = null;
   } else if (form.value.frequency === 'weekly' && form.value.start_date) {
     // Auto-select weekly_day from start_date
     form.value.weekly_day = new Date(form.value.start_date).getDay();
+  } else if (form.value.frequency === 'monthly') {
+    // Reset to default monthly type
+    form.value.monthly_type = 'same_date';
+    form.value.monthly_weekday = new Date(form.value.start_date).getDay();
   }
+};
+
+// On monthly type change
+const onMonthlyTypeChange = () => {
+  // Extract weekday from malayalam_weekday_X format
+  if (form.value.monthly_type?.startsWith('malayalam_weekday_')) {
+    form.value.monthly_weekday = parseInt(form.value.monthly_type.split('_')[2]);
+  }
+};
+
+// Check if selected monthly type is a malayalam weekday option
+const isMonthlyMalayalamWeekday = computed(() => {
+  return form.value.monthly_type?.startsWith('malayalam_weekday_');
+});
+
+// Get the actual monthly type for API (convert malayalam_weekday_X to malayalam_weekday)
+const actualMonthlyType = computed(() => {
+  if (form.value.monthly_type?.startsWith('malayalam_weekday_')) {
+    return 'malayalam_weekday';
+  }
+  return form.value.monthly_type;
+});
+
+// Check if monthly nakshatra option is available (needs beneficiary with nakshatra)
+const canUseNakshatraSchedule = computed(() => {
+  return form.value.beneficiaries.some(b => b.nakshathra_id);
+});
+
+// Check if pooja schedule option is available (pooja has next_pooja_date)
+const canUsePoojaSchedule = computed(() => {
+  return selectedPooja.value?.next_pooja_date;
+});
+
+// Get first beneficiary nakshatra name for display
+const firstBeneficiaryNakshatra = computed(() => {
+  const beneficiary = form.value.beneficiaries.find(b => b.nakshathra_id);
+  if (!beneficiary) return null;
+  const nakshatra = nakshathras.value.find(n => n.id == beneficiary.nakshathra_id);
+  return nakshatra?.malayalam_name || null;
+});
+
+// Convert string to Title Case (Camel Case)
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 };
 
 // Auto-update weekly_day when start_date changes (for weekly frequency)
@@ -420,15 +510,28 @@ watch(() => form.value.start_date, (newDate) => {
   }
 });
 
-// Auto-fill contact name with first devotee's name when contact is required
+// Auto-fill contact name with first devotee's name (Title Case)
+// Keeps syncing until user manually edits contact name
 watch(
-  [contactRequired, () => form.value.beneficiaries[0]?.name],
-  ([required, firstName]) => {
-    if (required && firstName?.trim() && !form.value.contact_name) {
-      form.value.contact_name = firstName.trim();
+  () => form.value.beneficiaries[0]?.name,
+  (firstName) => {
+    if (firstName?.trim() && contactNameAutoFilled.value) {
+      form.value.contact_name = toTitleCase(firstName.trim());
     }
   }
 );
+
+// Stop auto-fill sync when user manually edits contact name
+const onContactNameInput = () => {
+  contactNameAutoFilled.value = false;
+};
+
+// Convert contact name to Title Case on blur
+const formatContactName = () => {
+  if (form.value.contact_name?.trim()) {
+    form.value.contact_name = toTitleCase(form.value.contact_name.trim());
+  }
+};
 
 // Devotee autocomplete
 let searchTimeout = null;
@@ -471,6 +574,14 @@ const hideDropdown = (index) => {
   }, 200);
 };
 
+// Convert beneficiary name to Title Case on blur
+const formatBeneficiaryName = (index) => {
+  const name = form.value.beneficiaries[index]?.name;
+  if (name?.trim()) {
+    form.value.beneficiaries[index].name = toTitleCase(name.trim());
+  }
+};
+
 // Beneficiary management
 const addBeneficiary = () => {
   form.value.beneficiaries.push({ name: '', nakshathra_id: '', gothram: '', searching: false });
@@ -494,11 +605,16 @@ const resetForm = (keepContact = false) => {
     contact_address: '',
   };
 
+  // Reset auto-fill tracking (enable auto-fill for new contact)
+  contactNameAutoFilled.value = !keepContact;
+
   form.value = {
-      pooja_id: '',
+    pooja_id: '',
     deity_id: '',
     frequency: 'once',
     weekly_day: null,
+    monthly_type: 'same_date',
+    monthly_weekday: null,
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     quantity: 1,
@@ -558,6 +674,8 @@ const handleSubmit = async () => {
         deity_id: form.value.deity_id,
         frequency: form.value.frequency,
         weekly_day: form.value.frequency === 'weekly' ? form.value.weekly_day : null,
+        monthly_type: form.value.frequency === 'monthly' ? form.value.monthly_type : null,
+        monthly_weekday: form.value.frequency === 'monthly' && isMonthlyMalayalamWeekday.value ? form.value.monthly_weekday : null,
         start_date: form.value.start_date,
         end_date: form.value.frequency !== 'once' ? form.value.end_date : null,
         // Always send quantity
@@ -690,6 +808,55 @@ onMounted(async () => {
           </p>
         </div>
 
+        <!-- Monthly Type Selector -->
+        <div v-if="form.frequency === 'monthly'" class="mt-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">മാസത്തിൽ എങ്ങനെ (Schedule By) *</label>
+            <select
+              v-model="form.monthly_type"
+              @change="onMonthlyTypeChange"
+              class="w-full md:w-2/3 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              required
+            >
+              <option v-for="type in monthlyTypes" :key="type.value" :value="type.value"
+                :disabled="(type.value === 'nakshatra' && !canUseNakshatraSchedule) || (type.value === 'pooja_schedule' && !canUsePoojaSchedule)">
+                {{ type.label }}{{ type.value === 'nakshatra' && !canUseNakshatraSchedule ? ' (Add devotee nakshatra first)' : '' }}{{ type.value === 'pooja_schedule' && !canUsePoojaSchedule ? ' (Pooja has no fixed schedule)' : '' }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Same Date Info -->
+          <div v-if="form.monthly_type === 'same_date'" class="p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+            <p>പൂജ ഓരോ മാസവും <strong>{{ new Date(form.start_date).getDate() }}</strong>-ആം തീയതി നടത്തും</p>
+            <p class="text-xs mt-1">(Pooja will be performed on the {{ new Date(form.start_date).getDate() }}th of every month)</p>
+          </div>
+
+          <!-- Nakshatra Info -->
+          <div v-if="form.monthly_type === 'nakshatra'" class="p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
+            <p v-if="firstBeneficiaryNakshatra">
+              ഓരോ മലയാള മാസത്തിലും <strong>{{ firstBeneficiaryNakshatra }}</strong> നക്ഷത്രത്തിന്റെ 2-ാം ദിവസം പൂജ നടത്തും
+            </p>
+            <p v-else class="text-orange-600">
+              ⚠️ ഭക്തന്റെ നക്ഷത്രം തിരഞ്ഞെടുക്കുക (Select devotee's nakshatra below)
+            </p>
+            <p class="text-xs mt-1">(Pooja on 2nd occurrence of nakshatra in each Malayalam month)</p>
+          </div>
+
+          <!-- Malayalam Weekday Info -->
+          <div v-if="isMonthlyMalayalamWeekday" class="p-3 bg-green-50 rounded-lg text-sm text-green-700">
+            <p>ഓരോ മലയാള മാസത്തിലെയും (ചിങ്ങം, കന്നി...) <strong>{{ firstWeekdayOptions.find(d => d.value == form.monthly_weekday)?.malayalam }}</strong> പൂജ നടത്തും</p>
+            <p class="text-xs mt-1">(Pooja on {{ firstWeekdayOptions.find(d => d.value == form.monthly_weekday)?.english }} of each Malayalam month - Chingam, Kanni, Thulam, etc.)</p>
+          </div>
+
+          <!-- Pooja Schedule Info -->
+          <div v-if="form.monthly_type === 'pooja_schedule'" class="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">
+            <p v-if="selectedPooja?.next_pooja_date">
+              അടുത്ത പൂജ തീയതി: <strong>{{ selectedPooja.next_pooja_date }}</strong>
+            </p>
+            <p class="text-xs mt-1">(Temple sets the pooja date, you'll be notified before each occurrence)</p>
+          </div>
+        </div>
+
         <!-- Quantity - always visible -->
         <div v-if="selectedPooja" class="mt-6">
           <Input
@@ -743,7 +910,7 @@ onMounted(async () => {
                   v-model="ben.name"
                   @input="searchDevotees(index, ben.name)"
                   @focus="ben.name?.length >= 3 && searchDevotees(index, ben.name)"
-                  @blur="hideDropdown(index)"
+                  @blur="hideDropdown(index); formatBeneficiaryName(index)"
                   type="text"
                   placeholder="Type 3+ letters to search"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -884,6 +1051,8 @@ onMounted(async () => {
               placeholder="Full name"
               :required="contactRequired"
               :error="errors.contact_name?.[0]"
+              @input="onContactNameInput"
+              @blur="formatContactName"
             />
             <Input
               v-model="form.contact_number"

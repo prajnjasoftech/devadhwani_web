@@ -206,6 +206,48 @@ const formatTime = (timeStr) => {
   return timeStr;
 };
 
+// Format time with "next day" indicator if applicable
+const formatTimeWithDay = (timeStr, referenceDate) => {
+  if (!timeStr || !referenceDate) return formatTime(timeStr);
+  try {
+    const endDate = new Date(timeStr);
+    const refDate = new Date(referenceDate);
+
+    if (isNaN(endDate) || isNaN(refDate)) return formatTime(timeStr);
+
+    // Compare dates (ignore time)
+    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const refDay = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+
+    const time = endDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    if (endDay > refDay) {
+      return `${time} (അടുത്ത ദിവസം)`;
+    }
+    return time;
+  } catch (e) {
+    return formatTime(timeStr);
+  }
+};
+
+// Check if a nakshatra starts on the given date
+const startsOnDate = (startStr, referenceDate) => {
+  if (!startStr || !referenceDate) return false;
+  try {
+    const startDate = new Date(startStr);
+    const refDate = new Date(referenceDate);
+
+    if (isNaN(startDate) || isNaN(refDate)) return false;
+
+    // Compare dates (ignore time)
+    return startDate.getFullYear() === refDate.getFullYear() &&
+           startDate.getMonth() === refDate.getMonth() &&
+           startDate.getDate() === refDate.getDate();
+  } catch (e) {
+    return false;
+  }
+};
+
 const selectedDateFormatted = computed(() => {
   if (!selectedDate.value) return 'Select a date';
   const date = new Date(selectedDate.value);
@@ -364,10 +406,12 @@ onMounted(fetchMonthData);
                 <div class="text-right">
                   <div class="text-yellow-700 font-medium">
                     {{ panchangData.nakshatra[0].name }}
-                    <span class="text-xs text-gray-500 ml-1">{{ formatTime(panchangData.nakshatra[0].end) }} വരെ</span>
+                    <span class="text-xs text-gray-500 ml-1">{{ formatTimeWithDay(panchangData.nakshatra[0].end, selectedDate) }} വരെ</span>
                   </div>
-                  <div v-if="panchangData.nakshatra[1]" class="text-yellow-700 font-medium mt-1">
+                  <!-- Only show 2nd nakshatra if it starts on this day -->
+                  <div v-if="panchangData.nakshatra[1] && startsOnDate(panchangData.nakshatra[1].start, selectedDate)" class="text-yellow-700 font-medium mt-1">
                     {{ panchangData.nakshatra[1].name }}
+                    <span class="text-xs text-gray-500 ml-1">{{ formatTime(panchangData.nakshatra[1].start) }} മുതൽ</span>
                   </div>
                 </div>
               </div>
@@ -446,10 +490,12 @@ onMounted(fetchMonthData);
                 <div class="text-xs text-gray-500">Nakshatra</div>
                 <div class="font-medium text-sm text-yellow-700">
                   {{ todayPanchang.nakshatra[0].name }}
-                  <span class="text-xs text-gray-500">{{ formatTime(todayPanchang.nakshatra[0].end) }} വരെ</span>
+                  <span class="text-xs text-gray-500">{{ formatTimeWithDay(todayPanchang.nakshatra[0].end, today) }} വരെ</span>
                 </div>
-                <div v-if="todayPanchang.nakshatra[1]" class="font-medium text-sm text-yellow-700">
+                <!-- Only show 2nd nakshatra if it starts today -->
+                <div v-if="todayPanchang.nakshatra[1] && startsOnDate(todayPanchang.nakshatra[1].start, today)" class="font-medium text-sm text-yellow-700">
                   {{ todayPanchang.nakshatra[1].name }}
+                  <span class="text-xs text-gray-500">{{ formatTime(todayPanchang.nakshatra[1].start) }} മുതൽ</span>
                 </div>
               </div>
             </div>

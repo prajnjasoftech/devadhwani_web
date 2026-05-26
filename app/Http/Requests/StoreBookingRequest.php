@@ -32,7 +32,8 @@ class StoreBookingRequest extends FormRequest
             'items.*.end_date' => 'nullable|date|after_or_equal:items.*.start_date',
             'items.*.frequency' => 'required|in:once,daily,weekly,monthly',
             'items.*.weekly_day' => 'nullable|integer|min:0|max:6',
-            'items.*.monthly_type' => 'nullable|in:by_date,by_nakshathra',
+            'items.*.monthly_type' => 'nullable|in:same_date,nakshatra,malayalam_weekday,pooja_schedule,malayalam_weekday_0,malayalam_weekday_1,malayalam_weekday_2,malayalam_weekday_3,malayalam_weekday_4,malayalam_weekday_5,malayalam_weekday_6',
+            'items.*.monthly_weekday' => 'nullable|integer|min:0|max:6',
             'items.*.monthly_day' => 'nullable|integer|min:1|max:31',
             'items.*.unit_amount' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'nullable|integer|min:1', // For poojas without devotee requirement

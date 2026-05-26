@@ -144,7 +144,16 @@ class BookingService
         $unitAmount = $data['unit_amount'] ?? $pooja->amount;
         $initialAmount = $unitAmount * $quantity * $devoteeCount;
 
-        Log::info('createBookingItem: Creating item record', ['quantity' => $quantity, 'devotee_count' => $devoteeCount, 'initial_amount' => $initialAmount]);
+        // Determine schedule_type and schedule_rule based on frequency and monthly_type
+        $scheduleData = $this->determineScheduleType($data, $pooja);
+
+        Log::info('createBookingItem: Creating item record', [
+            'quantity' => $quantity,
+            'devotee_count' => $devoteeCount,
+            'initial_amount' => $initialAmount,
+            'schedule_type' => $scheduleData['schedule_type'],
+        ]);
+
         $item = BookingItem::create([
             'booking_id' => $booking->id,
             'pooja_id' => $data['pooja_id'],
@@ -152,6 +161,10 @@ class BookingService
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'] ?? null,
             'frequency' => $data['frequency'] ?? 'once',
+            'schedule_type' => $scheduleData['schedule_type'],
+            'schedule_rule' => $scheduleData['schedule_rule'],
+            'occurrences_total' => $scheduleData['occurrences_total'],
+            'occurrences_completed' => 0,
             'monthly_type' => $data['monthly_type'] ?? null,
             'monthly_day' => $data['monthly_day'] ?? null,
             'unit_amount' => $unitAmount,
@@ -159,8 +172,8 @@ class BookingService
             'notes' => $data['notes'] ?? null,
             // beneficiary_count will be updated after adding beneficiaries
             'beneficiary_count' => $devoteeCount,
-            'occurrence_count' => 1,
-            'total_amount' => $initialAmount,
+            'occurrence_count' => $scheduleData['occurrences_total'],
+            'total_amount' => $initialAmount * $scheduleData['occurrences_total'],
         ]);
         Log::info('createBookingItem: Item created', ['item_id' => $item->id]);
 
@@ -222,10 +235,111 @@ class BookingService
 
         // Generate schedules based on frequency
         Log::info('createBookingItem: Generating schedules');
-        $item->generateSchedules();
-        Log::info('createBookingItem: Schedules generated, returning item', ['total_amount' => $item->total_amount]);
+
+        // For once bookings scheduled for today/past, create schedule immediately
+        // For recurring bookings, cron will handle schedule creation
+        if ($scheduleData['schedule_type'] === 'once') {
+            $item->generateSchedules();
+        } elseif (!$item->needsCronProcessing()) {
+            // Fallback for any non-cron types
+            $item->generateSchedules();
+        }
+        // For cron-processed types (daily, weekly, monthly_*), schedules are created by ProcessDailySchedules command
+
+        Log::info('createBookingItem: Item ready, returning', ['total_amount' => $item->total_amount]);
 
         return $item;
+    }
+
+    /**
+     * Determine schedule_type and schedule_rule based on frequency and monthly_type
+     */
+    protected function determineScheduleType(array $data, Pooja $pooja): array
+    {
+        $frequency = $data['frequency'] ?? 'once';
+        $startDate = \Carbon\Carbon::parse($data['start_date']);
+        $endDate = !empty($data['end_date']) ? \Carbon\Carbon::parse($data['end_date']) : null;
+
+        $scheduleType = 'once';
+        $scheduleRule = [];
+        $occurrencesTotal = 1;
+
+        switch ($frequency) {
+            case 'once':
+                $scheduleType = 'once';
+                $occurrencesTotal = 1;
+                break;
+
+            case 'daily':
+                $scheduleType = 'daily';
+                if ($endDate) {
+                    $occurrencesTotal = $startDate->diffInDays($endDate) + 1;
+                }
+                break;
+
+            case 'weekly':
+                $scheduleType = 'weekly';
+                $weekday = $data['weekly_day'] ?? $startDate->dayOfWeek;
+                $scheduleRule = ['weekday' => (int) $weekday];
+                if ($endDate) {
+                    $occurrencesTotal = (int) ceil($startDate->diffInWeeks($endDate)) + 1;
+                }
+                break;
+
+            case 'monthly':
+                $monthlyType = $data['monthly_type'] ?? 'same_date';
+
+                // Handle malayalam_weekday_X format
+                if (str_starts_with($monthlyType, 'malayalam_weekday_')) {
+                    $scheduleType = 'monthly_malayalam_weekday';
+                    $weekday = (int) str_replace('malayalam_weekday_', '', $monthlyType);
+                    $scheduleRule = ['weekday' => $weekday];
+                } else {
+                    switch ($monthlyType) {
+                        case 'same_date':
+                            $scheduleType = 'monthly_same_date';
+                            $scheduleRule = ['day' => $startDate->day];
+                            break;
+
+                        case 'nakshatra':
+                            $scheduleType = 'monthly_nakshatra';
+                            // Get nakshatra_id from first beneficiary
+                            $nakshatraId = null;
+                            if (!empty($data['beneficiaries'][0]['nakshathra_id'])) {
+                                $nakshatraId = (int) $data['beneficiaries'][0]['nakshathra_id'];
+                            }
+                            $scheduleRule = ['nakshatra_id' => $nakshatraId];
+                            break;
+
+                        case 'malayalam_weekday':
+                            $scheduleType = 'monthly_malayalam_weekday';
+                            $weekday = $data['monthly_weekday'] ?? $startDate->dayOfWeek;
+                            $scheduleRule = ['weekday' => (int) $weekday];
+                            break;
+
+                        case 'pooja_schedule':
+                            $scheduleType = 'monthly_pooja_schedule';
+                            $scheduleRule = ['pooja_id' => $pooja->id];
+                            break;
+
+                        default:
+                            $scheduleType = 'monthly_same_date';
+                            $scheduleRule = ['day' => $startDate->day];
+                    }
+                }
+
+                // Calculate monthly occurrences
+                if ($endDate) {
+                    $occurrencesTotal = (int) floor($startDate->diffInMonths($endDate)) + 1;
+                }
+                break;
+        }
+
+        return [
+            'schedule_type' => $scheduleType,
+            'schedule_rule' => $scheduleRule,
+            'occurrences_total' => (int) max(1, $occurrencesTotal),
+        ];
     }
 
     /**

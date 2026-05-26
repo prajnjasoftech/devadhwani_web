@@ -19,7 +19,7 @@ defineProps({
   inputmode: String,
 });
 
-defineEmits(['update:modelValue']);
+defineEmits(['update:modelValue', 'input', 'blur']);
 </script>
 
 <template>
@@ -31,7 +31,8 @@ defineEmits(['update:modelValue']);
     <input
       :type="type"
       :value="modelValue"
-      @input="$emit('update:modelValue', $event.target.value)"
+      @input="$emit('update:modelValue', $event.target.value); $emit('input', $event)"
+      @blur="$emit('blur', $event)"
       :placeholder="placeholder"
       :disabled="disabled"
       :required="required"

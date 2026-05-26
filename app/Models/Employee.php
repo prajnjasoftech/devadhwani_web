@@ -44,6 +44,14 @@ class Employee extends Model
         'is_active' => 'boolean',
     ];
 
+    // Mutators - Auto Title Case for names
+    protected function name(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            set: fn ($value) => $value ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : $value,
+        );
+    }
+
     protected static function booted(): void
     {
         parent::booted();

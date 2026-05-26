@@ -19,6 +19,10 @@ class BookingItem extends Model
         'start_date',
         'end_date',
         'frequency',
+        'schedule_type',
+        'schedule_rule',
+        'occurrences_total',
+        'occurrences_completed',
         'weekly_day',
         'monthly_type',
         'monthly_day',
@@ -36,6 +40,7 @@ class BookingItem extends Model
         'end_date' => 'date',
         'unit_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'schedule_rule' => 'array',
     ];
 
     // Relationships
@@ -182,5 +187,42 @@ class BookingItem extends Model
         }
 
         return $this->start_date->format('d M Y') . ' - ' . $this->end_date->format('d M Y');
+    }
+
+    public function getScheduleTypeLabelAttribute(): string
+    {
+        return match ($this->schedule_type) {
+            'once' => 'One Time',
+            'daily' => 'Daily',
+            'weekly' => 'Weekly',
+            'monthly_same_date' => 'Monthly (Same Date)',
+            'monthly_nakshatra' => 'Monthly (Nakshatra)',
+            'monthly_malayalam_weekday' => 'Monthly (Malayalam Weekday)',
+            'monthly_pooja_schedule' => 'Monthly (Pooja Schedule)',
+            default => ucfirst($this->schedule_type ?? 'once'),
+        };
+    }
+
+    /**
+     * Check if this booking item needs cron-based schedule creation
+     */
+    public function needsCronProcessing(): bool
+    {
+        return in_array($this->schedule_type, [
+            'daily',
+            'weekly',
+            'monthly_same_date',
+            'monthly_nakshatra',
+            'monthly_malayalam_weekday',
+            'monthly_pooja_schedule',
+        ]);
+    }
+
+    /**
+     * Check if all occurrences are completed
+     */
+    public function isCompleted(): bool
+    {
+        return $this->occurrences_completed >= $this->occurrences_total;
     }
 }

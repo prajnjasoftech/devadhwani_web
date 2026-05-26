@@ -42,6 +42,14 @@ class Booking extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    // Mutators - Auto Title Case for names
+    protected function contactName(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            set: fn ($value) => $value ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : $value,
+        );
+    }
+
     protected static function booted(): void
     {
         parent::booted();
