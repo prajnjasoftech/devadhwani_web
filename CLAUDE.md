@@ -47,6 +47,14 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - **Receipt Printing**: Auto-print thermal receipt after booking creation
 - **Payment Receipt**: Auto-print receipt when adding payment to existing booking
 - Receipt shows: temple name, booking number, pooja items, beneficiaries with nakshatra, amounts
+- **Monthly Schedule Options**:
+  - `same_date`: Same date every month (e.g., 15th)
+  - `nakshatra`: On devotee's nakshatra (2nd valid occurrence in Malayalam month)
+  - `malayalam_weekday`: First [weekday] of Malayalam month (മുപ്പട്ട് ഞായർ, etc.)
+  - `pooja_schedule`: Follow pooja's fixed schedule
+- **Nakshatra Scheduling Logic**: 2nd occurrence in Malayalam month where nakshatra lasts at least 2.5 hours after sunrise
+- **Name Auto-formatting**: All names converted to Title Case on save
+- **Cron Command**: `php artisan schedules:process` generates daily schedules
 
 ### 8. Purchase Management
 - **Vendors**: Supplier/vendor master with description field
@@ -125,6 +133,8 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
   - Yoga, Karana
   - Auspicious timings: Brahma Muhurat, Abhijit Muhurat
   - Inauspicious timings: Rahu Kaal, Yamaganda Kaal, Gulika Kaal, Dur Muhurat
+- **Nakshatra Display**: Shows "അടുത്ത ദിവസം" (next day) when nakshatra ends after midnight
+- **Smart Filtering**: Only shows 2nd nakshatra if it starts on the selected day
 - **API**: Uses Prokerala Astrology API (`prokerala/astrology-sdk`)
 - **Available to all temple users** (no permission required)
 
@@ -137,6 +147,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - `app/Services/LedgerService.php` - Ledger entry management
 - `app/Services/ProkeralaService.php` - Prokerala Astrology API client
 - `app/Http/Middleware/TempleScope.php` - Temple scoping middleware
+- `app/Console/Commands/ProcessDailySchedules.php` - Daily schedule generation (cron)
 
 ### Frontend
 - `resources/js/router/index.js` - Route definitions with guards
@@ -187,6 +198,8 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 php artisan migrate          # Run migrations
 php artisan db:seed          # Seed permissions + platform admin
 php artisan tinker           # Interactive shell
+php artisan schedules:process           # Generate tomorrow's schedules (run daily via cron)
+php artisan schedules:process --date=   # Process specific date
 npm run dev                  # Start Vite dev server
 npm run build                # Build for production
 ```
