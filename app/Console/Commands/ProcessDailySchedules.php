@@ -122,22 +122,19 @@ class ProcessDailySchedules extends Command
     /**
      * Process monthly nakshatra bookings
      * Books on the 2nd occurrence of nakshatra in the Malayalam month
-     * Nakshatra must not end before 2.5 hours after sunrise
+     * Nakshatra must start before sunrise AND end after 2.5 hours from sunrise
      */
     protected function processMonthlyNakshatraBookings(string $date, PanchangData $panchang): int
     {
-        // Get nakshatra ID for target date (first nakshatra = at sunrise)
-        $nakshatraId = $panchang->nakshatra[0]['id'] ?? null;
+        // Get valid nakshatra for pooja (checks both start before sunrise and end after threshold)
+        $poojaNakshatra = $this->getPoojaaNakshatra($panchang);
 
-        if (!$nakshatraId) {
+        if (!$poojaNakshatra) {
+            $this->line("  No valid nakshatra for pooja (must start before sunrise and last 2.5h after)");
             return 0;
         }
 
-        // Check if nakshatra ends after 2.5 hours from sunrise
-        if (!$this->isNakshatraValidForPooja($panchang, $nakshatraId)) {
-            $this->line("  Nakshatra {$nakshatraId} ends before 2.5 hours after sunrise - skipping");
-            return 0;
-        }
+        $nakshatraId = $poojaNakshatra['id'];
 
         // Check if this is the 2nd occurrence of this nakshatra in the Malayalam month
         $malayalamMonth = $panchang->malayalam_month;
@@ -166,30 +163,68 @@ class ProcessDailySchedules extends Command
     }
 
     /**
-     * Check if nakshatra is valid for pooja (ends after 2.5 hours from sunrise)
+     * Check if nakshatra is valid for pooja
+     * Must start before sunrise AND end after 2.5 hours from sunrise
      */
     protected function isNakshatraValidForPooja(PanchangData $panchang, int $nakshatraId): bool
     {
         // Find the nakshatra in the panchang data
         $nakshatra = collect($panchang->nakshatra)->firstWhere('id', $nakshatraId);
 
-        if (!$nakshatra || empty($nakshatra['end'])) {
+        if (!$nakshatra || empty($nakshatra['end']) || empty($nakshatra['start'])) {
             return false;
         }
 
-        // Parse sunrise and nakshatra end time
+        // Parse times
         $sunrise = Carbon::parse($panchang->sunrise);
+        $nakshatraStart = Carbon::parse($nakshatra['start']);
         $nakshatraEnd = Carbon::parse($nakshatra['end']);
 
-        // Nakshatra must end after 2.5 hours (150 minutes) from sunrise
+        // Nakshatra must start before sunrise AND end after 2.5 hours from sunrise
         $minEndTime = $sunrise->copy()->addMinutes(150);
 
-        return $nakshatraEnd->greaterThanOrEqualTo($minEndTime);
+        return $nakshatraStart->lessThan($sunrise) && $nakshatraEnd->greaterThanOrEqualTo($minEndTime);
+    }
+
+    /**
+     * Get the valid nakshatra for pooja from panchang data
+     * Logic: If 2 nakshatras, prefer 2nd if valid, else use 1st
+     */
+    protected function getPoojaaNakshatra(PanchangData $panchang): ?array
+    {
+        if (empty($panchang->nakshatra)) {
+            return null;
+        }
+
+        $sunrise = Carbon::parse($panchang->sunrise);
+        $threshold = $sunrise->copy()->addMinutes(150);
+
+        $isValid = function ($nakshatra) use ($sunrise, $threshold) {
+            if (empty($nakshatra['start']) || empty($nakshatra['end'])) {
+                return false;
+            }
+            $start = Carbon::parse($nakshatra['start']);
+            $end = Carbon::parse($nakshatra['end']);
+            return $start->lessThan($sunrise) && $end->greaterThanOrEqualTo($threshold);
+        };
+
+        // If 2 nakshatras, check 2nd first
+        if (count($panchang->nakshatra) >= 2 && $isValid($panchang->nakshatra[1])) {
+            return $panchang->nakshatra[1];
+        }
+
+        // Check 1st nakshatra
+        if ($isValid($panchang->nakshatra[0])) {
+            return $panchang->nakshatra[0];
+        }
+
+        // No valid nakshatra
+        return null;
     }
 
     /**
      * Get which valid occurrence (1st, 2nd, etc.) of a nakshatra this date is within the Malayalam month
-     * Only counts days where nakshatra ends after 2.5 hours from sunrise
+     * Only counts days where nakshatra starts before sunrise AND ends after 2.5 hours from sunrise
      */
     protected function getNakshatraOccurrenceInMonth(string $targetDate, int $nakshatraId, int $malayalamMonth, int $malayalamYear): int
     {
@@ -202,12 +237,11 @@ class ProcessDailySchedules extends Command
 
         $occurrence = 0;
         foreach ($dates as $panchangDay) {
-            $dayNakshatraId = $panchangDay->nakshatra[0]['id'] ?? null;
-            if ($dayNakshatraId === $nakshatraId) {
-                // Only count if nakshatra is valid (ends after 2.5 hours from sunrise)
-                if ($this->isNakshatraValidForPooja($panchangDay, $nakshatraId)) {
-                    $occurrence++;
-                }
+            // Get the valid nakshatra for pooja on this day
+            $poojaNakshatra = $this->getPoojaaNakshatra($panchangDay);
+
+            if ($poojaNakshatra && ($poojaNakshatra['id'] ?? null) === $nakshatraId) {
+                $occurrence++;
             }
         }
 

@@ -230,6 +230,50 @@ const formatTimeWithDay = (timeStr, referenceDate) => {
   }
 };
 
+// Get the valid nakshatra for pooja
+// Logic: Must start before sunrise AND end after 2.5 hours from sunrise
+// If 2 nakshatras: prefer 2nd if it meets criteria, else use 1st
+const getNakshatraForPooja = (panchang) => {
+  if (!panchang?.nakshatra?.length || !panchang?.sunrise) return null;
+  try {
+    const sunrise = new Date(panchang.sunrise);
+    const threshold = new Date(sunrise.getTime() + 150 * 60 * 1000); // 2.5 hours
+
+    const isValid = (nakshatra) => {
+      const start = new Date(nakshatra.start);
+      const end = new Date(nakshatra.end);
+      return start < sunrise && end >= threshold;
+    };
+
+    // If 2 nakshatras, check 2nd first
+    if (panchang.nakshatra.length >= 2 && isValid(panchang.nakshatra[1])) {
+      return { nakshatra: panchang.nakshatra[1], valid: true, index: 1 };
+    }
+
+    // Check 1st nakshatra
+    if (isValid(panchang.nakshatra[0])) {
+      return { nakshatra: panchang.nakshatra[0], valid: true, index: 0 };
+    }
+
+    // No valid nakshatra, return 1st with invalid flag
+    return { nakshatra: panchang.nakshatra[0], valid: false, index: 0 };
+  } catch (e) {
+    return null;
+  }
+};
+
+// Check if nakshatra is valid for pooja
+const isNakshatraValidForPooja = (panchang) => {
+  const result = getNakshatraForPooja(panchang);
+  return result?.valid ?? false;
+};
+
+// Get the nakshatra name for pooja display
+const getPoojaJaNakshatraName = (panchang) => {
+  const result = getNakshatraForPooja(panchang);
+  return result?.nakshatra?.name ?? panchang?.nakshatra?.[0]?.name ?? '-';
+};
+
 // Check if a nakshatra starts on the given date
 const startsOnDate = (startStr, referenceDate) => {
   if (!startStr || !referenceDate) return false;
@@ -417,6 +461,28 @@ onMounted(fetchMonthData);
               </div>
             </div>
 
+            <!-- Nakshatra for Pooja -->
+            <div v-if="panchangData.nakshatra?.length" class="py-2 border-b">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 font-medium">പൂജയ്ക്കുള്ള നക്ഷത്രം</span>
+                <div class="text-right">
+                  <span
+                    class="px-2 py-1 rounded-full text-sm font-medium"
+                    :class="isNakshatraValidForPooja(panchangData) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  >
+                    {{ getPoojaJaNakshatraName(panchangData) }}
+                    <span v-if="isNakshatraValidForPooja(panchangData)" class="ml-1">✓</span>
+                    <span v-else class="ml-1">✗</span>
+                  </span>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ isNakshatraValidForPooja(panchangData)
+                    ? 'സൂര്യോദയത്തിന് മുമ്പ് ആരംഭിച്ച് 2.5 മണിക്കൂർ ശേഷവും നിലനിൽക്കുന്നു'
+                    : 'നക്ഷത്രം സൂര്യോദയത്തിന് മുമ്പ് ആരംഭിക്കുകയോ 2.5 മണിക്കൂറിനുള്ളിൽ അവസാനിക്കുകയോ ചെയ്യുന്നു' }}
+              </p>
+            </div>
+
             <!-- Yoga -->
             <div v-if="panchangData.yoga?.[0]" class="flex justify-between py-2 border-b">
               <span class="text-gray-600 font-medium">യോഗം</span>
@@ -496,6 +562,24 @@ onMounted(fetchMonthData);
                 <div v-if="todayPanchang.nakshatra[1] && startsOnDate(todayPanchang.nakshatra[1].start, today)" class="font-medium text-sm text-yellow-700">
                   {{ todayPanchang.nakshatra[1].name }}
                   <span class="text-xs text-gray-500">{{ formatTime(todayPanchang.nakshatra[1].start) }} മുതൽ</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pooja Nakshatra -->
+            <div v-if="todayPanchang.nakshatra?.length" class="flex items-center gap-3">
+              <div
+                class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                :class="isNakshatraValidForPooja(todayPanchang) ? 'bg-green-100' : 'bg-red-100'"
+              >
+                <span :class="isNakshatraValidForPooja(todayPanchang) ? 'text-green-700' : 'text-red-700'" class="text-xs font-bold">P</span>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500">പൂജയ്ക്കുള്ള നക്ഷത്രം</div>
+                <div class="font-medium text-sm" :class="isNakshatraValidForPooja(todayPanchang) ? 'text-green-700' : 'text-red-700'">
+                  {{ getPoojaJaNakshatraName(todayPanchang) }}
+                  <span v-if="isNakshatraValidForPooja(todayPanchang)">✓</span>
+                  <span v-else>✗</span>
                 </div>
               </div>
             </div>
