@@ -33,6 +33,7 @@ class BookingItemResource extends JsonResource
             'date_range' => $this->date_range,
             'frequency' => $this->frequency,
             'frequency_label' => $this->frequency_label,
+            'schedule_label' => $this->schedule_label,
             'monthly_type' => $this->monthly_type,
             'monthly_day' => $this->monthly_day,
 

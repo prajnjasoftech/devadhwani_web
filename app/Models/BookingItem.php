@@ -189,6 +189,49 @@ class BookingItem extends Model
         return $this->start_date->format('d M Y') . ' - ' . $this->end_date->format('d M Y');
     }
 
+    public function getScheduleLabelAttribute(): ?string
+    {
+        $weekdayNames = [
+            0 => 'Sundays',
+            1 => 'Mondays',
+            2 => 'Tuesdays',
+            3 => 'Wednesdays',
+            4 => 'Thursdays',
+            5 => 'Fridays',
+            6 => 'Saturdays',
+        ];
+
+        $malayalamWeekdayNames = [
+            0 => 'ഞായറാഴ്ച',
+            1 => 'തിങ്കളാഴ്ച',
+            2 => 'ചൊവ്വാഴ്ച',
+            3 => 'ബുധനാഴ്ച',
+            4 => 'വ്യാഴാഴ്ച',
+            5 => 'വെള്ളിയാഴ്ച',
+            6 => 'ശനിയാഴ്ച',
+        ];
+
+        if ($this->frequency === 'weekly') {
+            $weekday = $this->schedule_rule['weekday'] ?? $this->weekly_day ?? $this->start_date->dayOfWeek;
+            return 'On ' . ($weekdayNames[$weekday] ?? 'Unknown') . ' (' . ($malayalamWeekdayNames[$weekday] ?? '') . ')';
+        }
+
+        if ($this->frequency === 'monthly') {
+            switch ($this->schedule_type) {
+                case 'monthly_same_date':
+                    $day = $this->schedule_rule['day'] ?? $this->start_date->day;
+                    return 'On ' . $day . ' of every month';
+                case 'monthly_nakshatra':
+                    return 'On Nakshatra day';
+                case 'monthly_malayalam_weekday':
+                    $weekday = $this->schedule_rule['weekday'] ?? 0;
+                    return 'First ' . ($weekdayNames[$weekday] ?? 'day') . ' of Malayalam month';
+            }
+        }
+
+        return null;
+    }
+
     public function getScheduleTypeLabelAttribute(): string
     {
         return match ($this->schedule_type) {

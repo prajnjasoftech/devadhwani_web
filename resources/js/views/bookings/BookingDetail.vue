@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
@@ -184,92 +184,23 @@ const addPayment = async () => {
   }
 };
 
-// Print payment receipt
+// Store last payment for print view
+const lastPayment = ref(null);
+
+// Print payment receipt using window.print()
 const printPaymentReceipt = (payment) => {
-  const templeName = authStore.user?.temple?.temple_name || 'Temple';
-  const b = booking.value;
-
-  // Build pooja items HTML
-  let itemsHtml = '';
-  b.items?.forEach(item => {
-    itemsHtml += `
-      <div style="margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; font-weight: bold;">
-          <span>${item.pooja?.name || ''}</span>
-          <span>${item.total_amount_formatted}</span>
-        </div>
-        <div style="font-size: 10px; color: #666; padding-left: 8px;">
-          ${item.deity?.name || ''}${item.quantity > 1 ? ' | Qty: ' + item.quantity : ''}
-        </div>
-        <div style="font-size: 10px; color: #666; padding-left: 8px;">
-          ${item.frequency === 'once' ? item.start_date_formatted : item.date_range + ' (' + item.frequency_label + ')'}
-        </div>
-        ${item.beneficiaries?.map(ben => `
-          <div style="font-size: 10px; padding-left: 8px; display: flex; justify-content: space-between;">
-            <span>${ben.name}</span>
-            <span style="color: #333; font-weight: 500;">${ben.nakshathra?.malayalam_name || ''}</span>
-          </div>
-        `).join('') || ''}
-      </div>
-    `;
+  lastPayment.value = payment;
+  nextTick(() => {
+    window.print();
   });
+};
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Payment Receipt - ${b.booking_number}</title>
-      <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: monospace; font-size: 12px; line-height: 1.4; width: 76mm; margin: 0; padding: 2mm; }
-        .header { text-align: center; border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
-        .header .title { font-size: 14px; font-weight: bold; }
-        .row { display: flex; justify-content: space-between; font-size: 11px; }
-        .section { border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
-        .bold { font-weight: bold; }
-        .footer { text-align: center; font-size: 10px; color: #666; margin-top: 8px; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="title">${templeName}</div>
-        <div>Payment Receipt</div>
-      </div>
-
-      <div class="section">
-        <div class="row"><span>Booking No:</span><span class="bold">${b.booking_number}</span></div>
-        <div class="row"><span>Date:</span><span>${payment.payment_date_formatted}</span></div>
-      </div>
-
-      <div class="section">
-        ${itemsHtml}
-      </div>
-
-      <div class="section">
-        <div class="row bold"><span>Amount Paid:</span><span>${payment.amount_formatted}</span></div>
-        <div class="row"><span>Method:</span><span style="text-transform: capitalize;">${payment.payment_method}</span></div>
-        ${payment.reference_number ? `<div class="row"><span>Reference:</span><span>${payment.reference_number}</span></div>` : ''}
-      </div>
-
-      <div class="section">
-        <div class="row"><span>Total Amount:</span><span>${b.total_amount_formatted}</span></div>
-        <div class="row"><span>Total Paid:</span><span>${b.paid_amount_formatted}</span></div>
-        ${b.balance_amount > 0 ? `<div class="row bold"><span>Balance:</span><span>${b.balance_amount_formatted}</span></div>` : ''}
-      </div>
-
-      <div class="footer">
-        <div>Thank you!</div>
-        <div>Powered by Prajnja Softech LLP</div>
-      </div>
-
-      ${'<'}script>window.onload = function() { window.print(); window.close(); }${'<'}/script>
-    ${'<'}/body>
-    ${'<'}/html>
-  `;
-
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  printWindow.document.write(html);
-  printWindow.document.close();
+// Print booking receipt
+const printBookingReceipt = () => {
+  lastPayment.value = null;
+  nextTick(() => {
+    window.print();
+  });
 };
 
 onMounted(fetchBooking);
@@ -278,7 +209,7 @@ onMounted(fetchBooking);
 <template>
   <div>
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6 print:hidden">
       <div class="flex items-center gap-4">
         <Button variant="ghost" @click="router.push('/bookings')">
           <ArrowLeftIcon class="w-5 h-5" />
@@ -291,6 +222,14 @@ onMounted(fetchBooking);
         </div>
       </div>
       <div class="flex items-center gap-3">
+        <Button
+          v-if="booking"
+          variant="secondary"
+          @click="printBookingReceipt"
+        >
+          <PrinterIcon class="w-5 h-5 mr-2" />
+          Print
+        </Button>
         <Button
           v-if="booking && booking.booking_status !== 'cancelled' && authStore.hasPermission('bookings.update')"
           variant="outline"
@@ -310,14 +249,14 @@ onMounted(fetchBooking);
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
+    <div v-if="loading" class="flex items-center justify-center py-12 print:hidden">
       <svg class="animate-spin h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
     </div>
 
-    <div v-else-if="booking" class="space-y-6">
+    <div v-else-if="booking" class="space-y-6 print:hidden">
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -401,13 +340,23 @@ onMounted(fetchBooking);
               <div>
                 <h4 class="font-medium text-gray-900">{{ item.pooja?.name }}</h4>
                 <p class="text-sm text-gray-500">{{ item.deity?.name }}</p>
-                <p class="text-xs text-gray-400 mt-1">
-                  {{ item.frequency_label }} | {{ item.date_range }}
+                <p class="text-sm text-gray-600 mt-1">
+                  <template v-if="item.frequency === 'once'">
+                    {{ item.start_date_formatted }}
+                  </template>
+                  <template v-else>
+                    From {{ item.start_date_formatted }} to {{ item.end_date_formatted }} {{ item.frequency }}
+                    <span v-if="item.schedule_label" class="text-primary-600 font-medium">{{ item.schedule_label.replace('On ', 'on ') }}</span>
+                    <span class="text-gray-500">({{ item.occurrence_count }} poojas)</span>
+                  </template>
                 </p>
               </div>
               <div class="text-right">
                 <p class="font-medium">{{ item.total_amount_formatted }}</p>
-                <p class="text-xs text-gray-500">{{ item.occurrence_count }} occurrence(s)</p>
+                <p class="text-xs text-gray-500">
+                  <span v-if="item.quantity > 1">{{ item.quantity }} × </span>
+                  {{ item.occurrence_count }} pooja<span v-if="item.occurrence_count > 1">s</span>
+                </p>
               </div>
             </div>
 
@@ -485,7 +434,7 @@ onMounted(fetchBooking);
     </div>
 
     <!-- Payment Modal -->
-    <Modal :show="showPaymentModal" title="Add Payment" @close="showPaymentModal = false">
+    <Modal :show="showPaymentModal" title="Add Payment" @close="showPaymentModal = false" class="print:hidden">
       <form @submit.prevent="addPayment" class="space-y-4">
         <Input
           v-model.number="paymentForm.amount"
@@ -529,5 +478,93 @@ onMounted(fetchBooking);
         </div>
       </form>
     </Modal>
+
+    <!-- Print View (Thermal Printer Friendly) -->
+    <div v-if="booking" class="hidden print:block print-view">
+      <div class="text-center mb-3 border-b border-dashed border-gray-400 pb-2">
+        <div class="font-bold text-lg">{{ authStore.user?.temple?.temple_name || 'Temple' }}</div>
+        <div class="text-sm">{{ lastPayment ? 'Payment Receipt' : 'Booking Receipt' }}</div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div class="flex justify-between"><span>Booking No:</span><span class="font-bold">{{ booking.booking_number }}</span></div>
+        <div class="flex justify-between"><span>Date:</span><span>{{ lastPayment ? lastPayment.payment_date_formatted : booking.booking_date_formatted }}</span></div>
+        <div v-if="booking.contact_name" class="flex justify-between"><span>Name:</span><span>{{ booking.contact_name }}</span></div>
+        <div v-if="booking.contact_number" class="flex justify-between"><span>Phone:</span><span>{{ booking.contact_number }}</span></div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div v-for="item in booking.items" :key="item.id" class="mb-2">
+          <div class="flex justify-between font-bold">
+            <span>{{ item.pooja?.name }}</span>
+            <span>{{ item.total_amount_formatted }}</span>
+          </div>
+          <div v-if="item.deity?.name" class="text-xs text-gray-600 pl-2">
+            {{ item.deity?.name }}
+          </div>
+          <div class="text-xs text-gray-600 pl-2">
+            <template v-if="item.frequency === 'once'">
+              {{ item.start_date_formatted }}
+            </template>
+            <template v-else>
+              From {{ item.start_date_formatted }} to {{ item.end_date_formatted }} {{ item.frequency }}
+              <span v-if="item.schedule_label">{{ item.schedule_label.replace('On ', 'on ') }}</span>
+              ({{ item.occurrence_count }} poojas)
+            </template>
+          </div>
+          <div v-for="ben in item.beneficiaries" :key="ben.id" class="text-xs pl-2 flex justify-between">
+            <span>{{ ben.name }}</span>
+            <span class="font-medium">{{ ben.nakshathra?.malayalam_name || '' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment specific section -->
+      <div v-if="lastPayment" class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div class="flex justify-between font-bold"><span>Amount Paid:</span><span>{{ lastPayment.amount_formatted }}</span></div>
+        <div class="flex justify-between"><span>Method:</span><span class="capitalize">{{ lastPayment.payment_method }}</span></div>
+        <div v-if="lastPayment.reference_number" class="flex justify-between"><span>Reference:</span><span>{{ lastPayment.reference_number }}</span></div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div class="flex justify-between font-bold"><span>Total:</span><span>{{ booking.total_amount_formatted }}</span></div>
+        <div class="flex justify-between"><span>Paid:</span><span>{{ booking.paid_amount_formatted }}</span></div>
+        <div v-if="booking.balance_amount > 0" class="flex justify-between font-bold"><span>Balance:</span><span>{{ booking.balance_amount_formatted }}</span></div>
+      </div>
+
+      <div class="text-center text-xs text-gray-500 mt-3">
+        <div>Thank you!</div>
+        <div>Powered by Prajnja Softech LLP</div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style>
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  .print-view {
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.3;
+    max-width: 76mm;
+    padding: 0;
+  }
+
+  .print-view .font-bold {
+    font-weight: bold;
+  }
+
+  .print-view .text-sm {
+    font-size: 11px;
+  }
+
+  .print-view .text-xs {
+    font-size: 10px;
+  }
+}
+</style>

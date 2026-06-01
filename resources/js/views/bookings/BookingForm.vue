@@ -28,89 +28,10 @@ const accounts = ref([]);
 const showSuccessModal = ref(false);
 const createdBooking = ref(null);
 
-// Print receipt in new window
+// Print receipt using window.print()
 const printReceipt = () => {
-  const booking = createdBooking.value;
-  if (!booking) return;
-
-  const templeName = authStore.user?.temple?.temple_name || 'Temple';
-
-  let itemsHtml = '';
-  booking.items?.forEach(item => {
-    itemsHtml += `
-      <div style="margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; font-weight: bold;">
-          <span>${item.pooja?.name || ''}</span>
-          <span>${item.total_amount_formatted}</span>
-        </div>
-        <div style="font-size: 10px; color: #666; padding-left: 8px;">
-          ${item.deity?.name || ''}${item.quantity > 1 ? ' | Qty: ' + item.quantity : ''}
-        </div>
-        <div style="font-size: 10px; color: #666; padding-left: 8px;">
-          ${item.frequency === 'once' ? 'Date: ' + item.start_date_formatted : item.start_date_formatted + ' - ' + (item.end_date_formatted || '') + ' (' + item.frequency_label + ')'}
-        </div>
-        ${item.beneficiaries?.map(ben => `
-          <div style="font-size: 10px; padding-left: 8px; display: flex; justify-content: space-between;">
-            <span>${ben.name}</span>
-            <span style="color: #333; font-weight: 500;">${ben.nakshathra?.malayalam_name || ''}</span>
-          </div>
-        `).join('') || ''}
-      </div>
-    `;
-  });
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Receipt - ${booking.booking_number}</title>
-      <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: monospace; font-size: 12px; line-height: 1.4; width: 76mm; margin: 0; padding: 2mm; }
-        .header { text-align: center; border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
-        .header .title { font-size: 14px; font-weight: bold; }
-        .row { display: flex; justify-content: space-between; font-size: 11px; }
-        .section { border-bottom: 1px dashed #666; padding-bottom: 8px; margin-bottom: 8px; }
-        .bold { font-weight: bold; }
-        .footer { text-align: center; font-size: 10px; color: #666; margin-top: 8px; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="title">${templeName}</div>
-        <div>Booking Receipt</div>
-      </div>
-
-      <div class="section">
-        <div class="row"><span>Receipt No:</span><span class="bold">${booking.booking_number}</span></div>
-        <div class="row"><span>Date:</span><span>${booking.booking_date_formatted}</span></div>
-        ${booking.contact_name ? `<div class="row"><span>Name:</span><span>${booking.contact_name}</span></div>` : ''}
-        ${booking.contact_number ? `<div class="row"><span>Phone:</span><span>${booking.contact_number}</span></div>` : ''}
-      </div>
-
-      <div class="section">
-        ${itemsHtml}
-      </div>
-
-      <div class="section">
-        <div class="row bold"><span>Total:</span><span>${booking.total_amount_formatted}</span></div>
-        <div class="row"><span>Paid:</span><span>${booking.paid_amount_formatted}</span></div>
-        ${booking.balance_amount > 0 ? `<div class="row bold"><span>Balance:</span><span>${booking.balance_amount_formatted}</span></div>` : ''}
-      </div>
-
-      <div class="footer">
-        <div>Thank you for your booking!</div>
-        <div>Powered by Prajnja Softech LLP</div>
-      </div>
-
-      ${'<'}script>window.onload = function() { window.print(); window.close(); }${'<'}/script>
-    ${'<'}/body>
-    ${'<'}/html>
-  `;
-
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  printWindow.document.write(html);
-  printWindow.document.close();
+  if (!createdBooking.value) return;
+  window.print();
 };
 
 // Auto-print when success modal opens
@@ -715,20 +636,20 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="mb-6">
+    <div class="mb-6 print:hidden">
       <h1 class="text-2xl font-bold text-gray-900">New Booking</h1>
       <p class="text-gray-500">Create a new pooja booking</p>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
+    <div v-if="loading" class="flex items-center justify-center py-12 print:hidden">
       <svg class="animate-spin h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
     </div>
 
-    <form v-else @submit.prevent="handleSubmit" class="space-y-6">
+    <form v-else @submit.prevent="handleSubmit" class="space-y-6 print:hidden">
       <!-- Pooja Selection -->
       <Card title="Pooja Details">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1108,7 +1029,7 @@ onMounted(async () => {
     </form>
 
     <!-- Success Modal -->
-    <Modal :show="showSuccessModal" title="Booking Created" @close="viewBooking">
+    <Modal :show="showSuccessModal" title="Booking Created" @close="viewBooking" class="print:hidden">
       <div class="text-center py-4">
         <div class="mx-auto flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
           <CheckCircleIcon class="w-10 h-10 text-green-600" />
@@ -1143,5 +1064,86 @@ onMounted(async () => {
       </div>
     </Modal>
 
+    <!-- Print View (Thermal Printer Friendly) -->
+    <div v-if="createdBooking" class="hidden print:block print-view">
+      <div class="text-center mb-3 border-b border-dashed border-gray-400 pb-2">
+        <div class="font-bold text-lg">{{ authStore.user?.temple?.temple_name || 'Temple' }}</div>
+        <div class="text-sm">Booking Receipt</div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div class="flex justify-between"><span>Receipt No:</span><span class="font-bold">{{ createdBooking.booking_number }}</span></div>
+        <div class="flex justify-between"><span>Date:</span><span>{{ createdBooking.booking_date_formatted }}</span></div>
+        <div v-if="createdBooking.contact_name" class="flex justify-between"><span>Name:</span><span>{{ createdBooking.contact_name }}</span></div>
+        <div v-if="createdBooking.contact_number" class="flex justify-between"><span>Phone:</span><span>{{ createdBooking.contact_number }}</span></div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div v-for="item in createdBooking.items" :key="item.id" class="mb-2">
+          <div class="flex justify-between font-bold">
+            <span>{{ item.pooja?.name }}</span>
+            <span>{{ item.total_amount_formatted }}</span>
+          </div>
+          <div v-if="item.deity?.name" class="text-xs text-gray-600 pl-2">
+            {{ item.deity?.name }}
+          </div>
+          <div class="text-xs text-gray-600 pl-2">
+            <template v-if="item.frequency === 'once'">
+              {{ item.start_date_formatted }}
+            </template>
+            <template v-else>
+              From {{ item.start_date_formatted }} to {{ item.end_date_formatted }} {{ item.frequency }}
+              <span v-if="item.schedule_label">{{ item.schedule_label.replace('On ', 'on ') }}</span>
+              ({{ item.occurrence_count }} poojas)
+            </template>
+          </div>
+          <div v-for="ben in item.beneficiaries" :key="ben.id" class="text-xs pl-2 flex justify-between">
+            <span>{{ ben.name }}</span>
+            <span class="font-medium">{{ ben.nakshathra?.malayalam_name || '' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-b border-dashed border-gray-400 pb-2 mb-2">
+        <div class="flex justify-between font-bold"><span>Total:</span><span>{{ createdBooking.total_amount_formatted }}</span></div>
+        <div class="flex justify-between"><span>Paid:</span><span>{{ createdBooking.paid_amount_formatted }}</span></div>
+        <div v-if="createdBooking.balance_amount > 0" class="flex justify-between font-bold"><span>Balance:</span><span>{{ createdBooking.balance_amount_formatted }}</span></div>
+      </div>
+
+      <div class="text-center text-xs text-gray-500 mt-3">
+        <div>Thank you for your booking!</div>
+        <div>Powered by Prajnja Softech LLP</div>
+      </div>
+    </div>
+
   </div>
 </template>
+
+<style>
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  .print-view {
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.3;
+    max-width: 76mm;
+    padding: 0;
+  }
+
+  .print-view .font-bold {
+    font-weight: bold;
+  }
+
+  .print-view .text-sm {
+    font-size: 11px;
+  }
+
+  .print-view .text-xs {
+    font-size: 10px;
+  }
+}
+</style>

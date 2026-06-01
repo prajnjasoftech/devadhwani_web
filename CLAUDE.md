@@ -44,9 +44,11 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Devotee/beneficiary management
 - Payment tracking (partial/full)
 - Occurrence tracking (daily poojas)
-- **Receipt Printing**: Auto-print thermal receipt after booking creation
-- **Payment Receipt**: Auto-print receipt when adding payment to existing booking
+- **Receipt Printing**: Thermal printer friendly using `window.print()` with inline print view
+- **Payment Receipt**: Print receipt when adding payment to existing booking
 - Receipt shows: temple name, booking number, pooja items, beneficiaries with nakshatra, amounts
+- **Weekly Booking Display**: Shows "From 01 Jun 2026 to 30 Jun 2026 weekly on Mondays (തിങ്കളാഴ്ച) (5 poojas)"
+- **Weekly Occurrence Calculation**: Counts actual weekday occurrences in date range (not formula-based)
 - **Monthly Schedule Options**:
   - `same_date`: Same date every month (e.g., 15th)
   - `nakshatra`: On devotee's nakshatra (2nd valid occurrence in Malayalam month)
@@ -182,8 +184,10 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Consistent action icons: PencilIcon (edit), NoSymbolIcon/CheckCircleIcon (toggle status)
 - Cards with sections for form organization
 - Table with custom slot templates
+- **Sidebar**: Scrollable navigation with fixed logo header
 - **Date Fields**: Forms default to today's date (no date input shown for Purchase, Expense, Donation, Employee Payment)
 - **Print Support**: `print:hidden` class hides elements during print; `hidden print:block` shows print-only elements
+- **Modal Print**: Modals auto-hide during print (`print:hidden` on modal container)
 - **Error Handling**: Insufficient balance errors show toast notification
 - **Footer**: "Powered by Prajnja Softech LLP" in app footer and print outputs
 

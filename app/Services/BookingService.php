@@ -282,7 +282,18 @@ class BookingService
                 $weekday = $data['weekly_day'] ?? $startDate->dayOfWeek;
                 $scheduleRule = ['weekday' => (int) $weekday];
                 if ($endDate) {
-                    $occurrencesTotal = (int) ceil($startDate->diffInWeeks($endDate)) + 1;
+                    // Count actual occurrences of the weekday between start and end dates
+                    $occurrencesTotal = 0;
+                    $current = $startDate->copy();
+                    // Move to first occurrence of the weekday
+                    while ($current->dayOfWeek != $weekday && $current <= $endDate) {
+                        $current->addDay();
+                    }
+                    // Count all occurrences
+                    while ($current <= $endDate) {
+                        $occurrencesTotal++;
+                        $current->addWeek();
+                    }
                 }
                 break;
 

@@ -130,11 +130,11 @@ const isActive = (href) => {
 
 <template>
   <aside
-    class="fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-gray-800"
+    class="fixed top-0 left-0 z-40 h-screen flex flex-col transition-all duration-300 bg-gray-800"
     :class="uiStore.sidebarOpen ? 'w-64' : 'w-20'"
   >
     <!-- Logo -->
-    <div class="flex items-center h-16 px-4 border-b border-gray-700">
+    <div class="flex items-center h-16 px-4 border-b border-gray-700 shrink-0">
       <img src="/images/logo.png" alt="Devadhwani" class="h-10 w-10" />
       <span
         v-if="uiStore.sidebarOpen"
@@ -145,7 +145,7 @@ const isActive = (href) => {
     </div>
 
     <!-- Navigation -->
-    <nav class="mt-4 px-3">
+    <nav class="flex-1 mt-4 px-3 pb-16 overflow-y-auto">
       <ul class="space-y-1">
         <li v-for="item in navigation" :key="item.name">
           <router-link
