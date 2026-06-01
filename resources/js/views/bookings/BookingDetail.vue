@@ -512,9 +512,9 @@ onMounted(fetchBooking);
               ({{ item.occurrence_count }} poojas)
             </template>
           </div>
-          <div v-for="ben in item.beneficiaries" :key="ben.id" class="text-xs pl-2 flex justify-between">
+          <div v-for="ben in item.beneficiaries" :key="ben.id" class="beneficiary pl-2 flex justify-between">
             <span>{{ ben.name }}</span>
-            <span class="font-medium">{{ ben.nakshathra?.malayalam_name || '' }}</span>
+            <span>{{ ben.nakshathra?.malayalam_name || '' }}</span>
           </div>
         </div>
       </div>
@@ -549,26 +549,33 @@ onMounted(fetchBooking);
 
   .print-view {
     font-family: monospace;
-    font-size: 14px;
+    font-size: 18px;
     line-height: 1.4;
     max-width: 76mm;
     padding: 0;
+    color: #000;
+    font-weight: 500;
   }
 
   .print-view .font-bold {
-    font-weight: bold;
+    font-weight: 700;
   }
 
   .print-view .text-lg {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .print-view .text-sm {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .print-view .text-xs {
-    font-size: 12px;
+    font-size: 14px;
+  }
+
+  .print-view .beneficiary {
+    font-size: 18px;
+    font-weight: 700;
   }
 }
 </style>

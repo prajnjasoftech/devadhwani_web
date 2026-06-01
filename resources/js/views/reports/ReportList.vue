@@ -582,6 +582,9 @@ onMounted(fetchReport);
   .report-container {
     padding: 0;
     max-width: 100%;
+    font-size: 14px;
+    color: #000;
+    font-weight: 500;
   }
 
   body {

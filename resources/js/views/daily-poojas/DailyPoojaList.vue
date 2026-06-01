@@ -413,22 +413,24 @@ onMounted(fetchSchedules);
 
   .print-view {
     font-family: monospace;
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.3;
     max-width: 76mm;
     padding: 0;
+    color: #000;
+    font-weight: 500;
   }
 
   .print-view .font-bold {
-    font-weight: bold;
+    font-weight: 700;
   }
 
   .print-view .text-sm {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .print-view .text-xs {
-    font-size: 10px;
+    font-size: 12px;
   }
 }
 </style>
