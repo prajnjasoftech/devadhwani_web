@@ -44,7 +44,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - Devotee/beneficiary management
 - Payment tracking (partial/full)
 - Occurrence tracking (daily poojas)
-- **Receipt Printing**: Thermal printer friendly using `window.print()` with inline print view
+- **Receipt Printing**: Thermal printer friendly using `window.print()` with inline print view (14px base font)
 - **Payment Receipt**: Print receipt when adding payment to existing booking
 - Receipt shows: temple name, booking number, pooja items, beneficiaries with nakshatra, amounts
 - **Weekly Booking Display**: Shows "From 01 Jun 2026 to 30 Jun 2026 weekly on Mondays (തിങ്കളാഴ്ച) (5 poojas)"

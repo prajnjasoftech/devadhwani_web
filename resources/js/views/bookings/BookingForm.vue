@@ -1128,8 +1128,8 @@ onMounted(async () => {
 
   .print-view {
     font-family: monospace;
-    font-size: 12px;
-    line-height: 1.3;
+    font-size: 14px;
+    line-height: 1.4;
     max-width: 76mm;
     padding: 0;
   }
@@ -1138,12 +1138,16 @@ onMounted(async () => {
     font-weight: bold;
   }
 
+  .print-view .text-lg {
+    font-size: 16px;
+  }
+
   .print-view .text-sm {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .print-view .text-xs {
-    font-size: 10px;
+    font-size: 12px;
   }
 }
 </style>
