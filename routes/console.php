@@ -30,3 +30,10 @@ Schedule::command('schedules:process')
     ->dailyAt('00:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/schedules-process.log'));
+
+// Auto-complete past pending schedules - runs at 1 AM daily
+// Marks yesterday's pending poojas as completed
+Schedule::command('schedules:complete-past --force')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/schedules-complete.log'));
