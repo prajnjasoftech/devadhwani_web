@@ -174,6 +174,8 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - `2026_04_01_150002_add_account_id_to_booking_payments_table.php`
 - `2026_04_01_150003_add_account_id_to_purchases_table.php`
 - `2026_04_01_150004_add_account_id_to_expenses_table.php`
+- `2026_04_20_214756_add_schedule_columns_to_booking_items_table.php`
+- `2026_04_20_232511_update_monthly_type_column_in_booking_items_table.php`
 
 ## UI Patterns
 - Separate form pages (not modals) for create/edit
