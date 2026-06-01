@@ -386,9 +386,9 @@ onMounted(fetchSchedules);
           <template v-if="pooja.devotee_required">
             <div class="font-semibold">{{ pooja.pooja_name }}</div>
             <template v-for="schedule in pooja.schedules" :key="schedule.id">
-              <div v-for="(ben, bIdx) in schedule.beneficiaries_with_nakshatra" :key="bIdx" class="text-sm pl-2 flex justify-between">
+              <div v-for="(ben, bIdx) in schedule.beneficiaries_with_nakshatra" :key="bIdx" class="beneficiary pl-2 flex justify-between">
                 <span>{{ ben.name }}</span>
-                <span v-if="ben.nakshathra" class="text-gray-600">{{ ben.nakshathra }}</span>
+                <span v-if="ben.nakshathra">{{ ben.nakshathra }}</span>
               </div>
             </template>
           </template>
@@ -413,8 +413,8 @@ onMounted(fetchSchedules);
 
   .print-view {
     font-family: monospace;
-    font-size: 16px;
-    line-height: 1.3;
+    font-size: 18px;
+    line-height: 1.4;
     max-width: 76mm;
     padding: 0;
     color: #000;
@@ -425,12 +425,21 @@ onMounted(fetchSchedules);
     font-weight: 700;
   }
 
+  .print-view .text-lg {
+    font-size: 20px;
+  }
+
   .print-view .text-sm {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .print-view .text-xs {
-    font-size: 12px;
+    font-size: 14px;
+  }
+
+  .print-view .beneficiary {
+    font-size: 18px;
+    font-weight: 700;
   }
 }
 </style>
