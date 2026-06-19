@@ -49,15 +49,26 @@ class ReportController extends Controller
             ->get();
 
         // Flatten all booking items and group by pooja
+        // Calculate proportional paid/pending amounts per item
         $allItems = $bookingsQuery->flatMap(function ($booking) {
             return $booking->items->map(function ($item) use ($booking) {
                 // Use quantity for quantity-based poojas, otherwise use beneficiary_count
                 $qty = ($item->quantity && $item->quantity > 1) ? $item->quantity : ($item->beneficiary_count ?? 1);
+
+                // Calculate proportional paid amount for this item
+                $itemAmount = $item->total_amount;
+                $bookingTotal = $booking->total_amount > 0 ? $booking->total_amount : 1;
+                $proportion = $itemAmount / $bookingTotal;
+                $paidAmount = round($booking->paid_amount * $proportion, 2);
+                $pendingAmount = round($itemAmount - $paidAmount, 2);
+
                 return [
                     'pooja_id' => $item->pooja_id,
                     'pooja_name' => $item->pooja->name ?? 'Unknown',
                     'quantity' => $qty,
-                    'amount' => $item->total_amount,
+                    'amount' => $itemAmount,
+                    'paid_amount' => $paidAmount,
+                    'pending_amount' => $pendingAmount,
                     'booking_id' => $booking->id,
                 ];
             });
@@ -69,6 +80,8 @@ class ReportController extends Controller
                 'pooja_name' => $poojaName,
                 'quantity' => $items->sum('quantity'),
                 'total_amount' => round($items->sum('amount'), 2),
+                'paid_amount' => round($items->sum('paid_amount'), 2),
+                'pending_amount' => round($items->sum('pending_amount'), 2),
                 'bookings_count' => $bookingIds->count(),
             ];
         })->sortByDesc('total_amount')->values()->toArray();
@@ -132,7 +145,7 @@ class ReportController extends Controller
                     'expense_date' => $expense->expense_date->format('d M Y'),
                     'category' => $expense->category->name ?? 'N/A',
                     'description' => $expense->description,
-                    'total_amount' => round($expense->total_amount, 2),
+                    'total_amount' => round($expense->amount, 2),
                     'paid_amount' => round($expense->paid_amount, 2),
                     'balance_amount' => round($expense->balance_amount, 2),
                     'payment_status' => $expense->payment_status,
@@ -180,7 +193,8 @@ class ReportController extends Controller
 
         // Calculate totals
         $totalBookingAmount = array_sum(array_column($bookings, 'total_amount'));
-        $totalBookingPaid = $bookingsQuery->sum('paid_amount');
+        $totalBookingPaid = array_sum(array_column($bookings, 'paid_amount'));
+        $totalBookingPending = array_sum(array_column($bookings, 'pending_amount'));
         $totalDonationAmount = $donations->where('donation_type', 'financial')->sum('amount');
         $totalDonationAssetValue = $donations->where('donation_type', 'asset')->sum('estimated_value');
 
@@ -193,6 +207,106 @@ class ReportController extends Controller
 
         $totalIncome = $totalBookingPaid + $totalDonationAmount;
         $totalExpenses = $totalPurchasePaid + $totalExpensePaid + $totalSalaryPaid + $totalEmployeePayments;
+
+        // PENDING AMOUNTS SECTION (filtered by date range)
+
+        // Pending Booking Payments (receivables)
+        $pendingBookings = Booking::where('temple_id', $templeId)
+            ->whereBetween('booking_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->where('booking_status', '!=', 'cancelled')
+            ->orderBy('booking_date', 'desc')
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'booking_number' => $booking->booking_number,
+                    'booking_date' => $booking->booking_date->format('d M Y'),
+                    'total_amount' => round($booking->total_amount, 2),
+                    'paid_amount' => round($booking->paid_amount, 2),
+                    'balance_amount' => round($booking->balance_amount, 2),
+                    'payment_status' => $booking->payment_status,
+                ];
+            });
+
+        // Pending Purchase Payments (payables)
+        $pendingPurchases = Purchase::where('temple_id', $templeId)
+            ->whereBetween('purchase_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->with(['vendor:id,name', 'category:id,name'])
+            ->orderBy('purchase_date', 'desc')
+            ->get()
+            ->map(function ($purchase) {
+                return [
+                    'id' => $purchase->id,
+                    'purchase_number' => $purchase->purchase_number,
+                    'purchase_date' => $purchase->purchase_date->format('d M Y'),
+                    'vendor_name' => $purchase->vendor->name ?? 'N/A',
+                    'category' => $purchase->category->name ?? 'N/A',
+                    'total_amount' => round($purchase->total_amount, 2),
+                    'paid_amount' => round($purchase->paid_amount, 2),
+                    'balance_amount' => round($purchase->balance_amount, 2),
+                    'payment_status' => $purchase->payment_status,
+                ];
+            });
+
+        // Pending Expense Payments (payables)
+        $pendingExpenses = Expense::where('temple_id', $templeId)
+            ->whereBetween('expense_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->with(['category:id,name'])
+            ->orderBy('expense_date', 'desc')
+            ->get()
+            ->map(function ($expense) {
+                return [
+                    'id' => $expense->id,
+                    'expense_number' => $expense->expense_number,
+                    'expense_date' => $expense->expense_date->format('d M Y'),
+                    'category' => $expense->category->name ?? 'N/A',
+                    'description' => $expense->description,
+                    'total_amount' => round($expense->amount, 2),
+                    'paid_amount' => round($expense->paid_amount, 2),
+                    'balance_amount' => round($expense->balance_amount, 2),
+                    'payment_status' => $expense->payment_status,
+                ];
+            });
+
+        // Pending Salary Payments (payables) - filter by salary month/year within date range
+        $pendingSalaries = EmployeeSalary::where('temple_id', $templeId)
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->where(function ($query) use ($startDate, $endDate) {
+                // Include salaries where the salary period falls within the date range
+                $query->whereRaw("STR_TO_DATE(CONCAT(year, '-', month, '-01'), '%Y-%m-%d') >= ?", [$startDate->startOfMonth()->toDateString()])
+                      ->whereRaw("STR_TO_DATE(CONCAT(year, '-', month, '-01'), '%Y-%m-%d') <= ?", [$endDate->toDateString()]);
+            })
+            ->with(['employee:id,name,employee_code'])
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->get()
+            ->map(function ($salary) {
+                $grossSalary = ($salary->basic_salary ?? 0) + ($salary->allowances ?? 0);
+                return [
+                    'id' => $salary->id,
+                    'employee_name' => $salary->employee->name ?? 'N/A',
+                    'employee_code' => $salary->employee->employee_code ?? 'N/A',
+                    'month_year' => $salary->month . '/' . $salary->year,
+                    'gross_salary' => round($grossSalary, 2),
+                    'deductions' => round($salary->deductions ?? 0, 2),
+                    'net_salary' => round($salary->net_salary ?? 0, 2),
+                    'paid_amount' => round($salary->paid_amount ?? 0, 2),
+                    'balance_amount' => round(($salary->net_salary ?? 0) - ($salary->paid_amount ?? 0), 2),
+                    'payment_status' => $salary->payment_status,
+                ];
+            });
+
+        // Calculate pending totals
+        $totalPendingBookings = $pendingBookings->sum('balance_amount');
+        $totalPendingPurchases = $pendingPurchases->sum('balance_amount');
+        $totalPendingExpenses = $pendingExpenses->sum('balance_amount');
+        $totalPendingSalaries = $pendingSalaries->sum('balance_amount');
+
+        $totalPendingReceivables = $totalPendingBookings;
+        $totalPendingPayables = $totalPendingPurchases + $totalPendingExpenses + $totalPendingSalaries;
 
         return response()->json([
             'success' => true,
@@ -208,6 +322,7 @@ class ReportController extends Controller
                         'count' => count($bookings),
                         'total_amount' => round($totalBookingAmount, 2),
                         'total_paid' => round($totalBookingPaid, 2),
+                        'total_pending' => round($totalBookingPending, 2),
                     ],
                     'donations' => [
                         'data' => $donations->values()->toArray(),
@@ -253,6 +368,36 @@ class ReportController extends Controller
                     'total_expenses_formatted' => '₹' . number_format($totalExpenses, 2),
                     'net_balance' => round($totalIncome - $totalExpenses, 2),
                     'net_balance_formatted' => '₹' . number_format($totalIncome - $totalExpenses, 2),
+                ],
+                'pending' => [
+                    'receivables' => [
+                        'bookings' => [
+                            'data' => $pendingBookings->values()->toArray(),
+                            'count' => $pendingBookings->count(),
+                            'total' => round($totalPendingBookings, 2),
+                        ],
+                        'total' => round($totalPendingReceivables, 2),
+                        'total_formatted' => '₹' . number_format($totalPendingReceivables, 2),
+                    ],
+                    'payables' => [
+                        'purchases' => [
+                            'data' => $pendingPurchases->values()->toArray(),
+                            'count' => $pendingPurchases->count(),
+                            'total' => round($totalPendingPurchases, 2),
+                        ],
+                        'expenses' => [
+                            'data' => $pendingExpenses->values()->toArray(),
+                            'count' => $pendingExpenses->count(),
+                            'total' => round($totalPendingExpenses, 2),
+                        ],
+                        'salaries' => [
+                            'data' => $pendingSalaries->values()->toArray(),
+                            'count' => $pendingSalaries->count(),
+                            'total' => round($totalPendingSalaries, 2),
+                        ],
+                        'total' => round($totalPendingPayables, 2),
+                        'total_formatted' => '₹' . number_format($totalPendingPayables, 2),
+                    ],
                 ],
             ],
         ]);

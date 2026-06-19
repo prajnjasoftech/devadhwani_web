@@ -12,6 +12,8 @@ import {
   BanknotesIcon,
   DocumentTextIcon,
   CurrencyRupeeIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
@@ -233,6 +235,37 @@ onMounted(fetchReport);
         </Card>
       </div>
 
+      <!-- Pending Summary Cards -->
+      <div v-if="reportData.pending && (reportData.pending.receivables.total > 0 || reportData.pending.payables.total > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Pending Receivables</p>
+              <p class="text-2xl font-bold text-red-600">{{ reportData.pending.receivables.total_formatted }}</p>
+              <p class="text-xs text-gray-400 mt-1">{{ reportData.pending.receivables.bookings.count }} bookings</p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-lg">
+              <ClockIcon class="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Pending Payables</p>
+              <p class="text-2xl font-bold text-red-600">{{ reportData.pending.payables.total_formatted }}</p>
+              <p class="text-xs text-gray-400 mt-1">
+                {{ reportData.pending.payables.purchases.count + reportData.pending.payables.expenses.count + reportData.pending.payables.salaries.count }} items
+              </p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-lg">
+              <ExclamationTriangleIcon class="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <!-- INCOME SECTION -->
       <div v-if="reportData.income.bookings.data.length || reportData.income.donations.data.length" class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -259,7 +292,9 @@ onMounted(fetchReport);
                   <th class="px-3 py-2 text-left font-medium text-gray-500">Pooja</th>
                   <th class="px-3 py-2 text-center font-medium text-gray-500">Qty</th>
                   <th class="px-3 py-2 text-center font-medium text-gray-500">Bookings</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Amount</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -267,13 +302,17 @@ onMounted(fetchReport);
                   <td class="px-3 py-2 font-medium text-gray-900">{{ item.pooja_name }}</td>
                   <td class="px-3 py-2 text-center text-gray-600">{{ item.quantity }}</td>
                   <td class="px-3 py-2 text-center text-gray-500">{{ item.bookings_count }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-green-600">₹{{ item.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ item.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ item.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.pending_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ item.pending_amount.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
                   <td colspan="3" class="px-3 py-2 font-semibold text-gray-700">Total</td>
-                  <td class="px-3 py-2 text-right font-bold text-green-600">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-semibold text-gray-700">₹{{ reportData.income.bookings.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.income.bookings.total_paid > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.income.bookings.total_paid.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.income.bookings.total_pending > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.income.bookings.total_pending.toLocaleString() }}</td>
                 </tr>
               </tfoot>
             </table>
@@ -523,10 +562,251 @@ onMounted(fetchReport);
         </Card>
       </div>
 
+      <!-- PENDING AMOUNTS SECTION -->
+      <div v-if="reportData.pending && (reportData.pending.receivables.bookings.data.length || reportData.pending.payables.purchases.data.length || reportData.pending.payables.expenses.data.length || reportData.pending.payables.salaries.data.length)" class="mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <ClockIcon class="w-6 h-6 text-amber-600" />
+          Pending Amounts
+        </h2>
+
+        <!-- Pending Receivables (Bookings) -->
+        <Card v-if="reportData.pending.receivables.bookings.data.length" class="mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <ArrowTrendingUpIcon class="w-5 h-5 text-red-600" />
+              Pending Receivables (Bookings)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.pending.receivables.bookings.count }})</span>
+            </h3>
+            <span class="text-lg font-bold text-red-600">{{ reportData.pending.receivables.total_formatted }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Booking #</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="booking in reportData.pending.receivables.bookings.data" :key="booking.id" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ booking.booking_number }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ booking.booking_date }}</td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="px-2 py-0.5 text-xs rounded-full capitalize"
+                      :class="{
+                        'bg-red-100 text-red-700': booking.payment_status === 'pending',
+                        'bg-amber-100 text-amber-700': booking.payment_status === 'partial',
+                        'bg-green-100 text-green-700': booking.payment_status === 'paid'
+                      }"
+                    >
+                      {{ booking.payment_status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ booking.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="booking.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ booking.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="booking.balance_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ booking.balance_amount.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr>
+                  <td colspan="3" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-right font-semibold text-gray-700">₹{{ reportData.pending.receivables.bookings.data.reduce((sum, b) => sum + b.total_amount, 0).toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.receivables.bookings.data.reduce((sum, b) => sum + b.paid_amount, 0) > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.pending.receivables.bookings.data.reduce((sum, b) => sum + b.paid_amount, 0).toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.receivables.total > 0 ? 'text-red-600' : 'text-gray-400'">{{ reportData.pending.receivables.total_formatted }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+
+        <!-- Pending Payables Header -->
+        <div v-if="reportData.pending.payables.purchases.data.length || reportData.pending.payables.expenses.data.length || reportData.pending.payables.salaries.data.length" class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <ExclamationTriangleIcon class="w-5 h-5 text-red-600" />
+            Pending Payables
+          </h3>
+          <span class="text-lg font-bold text-red-600">{{ reportData.pending.payables.total_formatted }}</span>
+        </div>
+
+        <!-- Pending Purchases -->
+        <Card v-if="reportData.pending.payables.purchases.data.length" class="mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-800">
+              Pending Purchase Payments
+              <span class="text-sm font-normal text-gray-500">({{ reportData.pending.payables.purchases.count }})</span>
+            </h3>
+            <span class="font-bold text-red-600">₹{{ reportData.pending.payables.purchases.total.toLocaleString() }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Purchase #</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Vendor</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="purchase in reportData.pending.payables.purchases.data" :key="purchase.id" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ purchase.purchase_number }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ purchase.purchase_date }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ purchase.vendor_name }}</td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="px-2 py-0.5 text-xs rounded-full capitalize"
+                      :class="{
+                        'bg-red-100 text-red-700': purchase.payment_status === 'pending',
+                        'bg-amber-100 text-amber-700': purchase.payment_status === 'partial',
+                        'bg-green-100 text-green-700': purchase.payment_status === 'paid'
+                      }"
+                    >
+                      {{ purchase.payment_status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ purchase.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="purchase.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ purchase.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="purchase.balance_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ purchase.balance_amount.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr>
+                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.purchases.data.reduce((sum, p) => sum + p.paid_amount, 0) > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.pending.payables.purchases.data.reduce((sum, p) => sum + p.paid_amount, 0).toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.purchases.total > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.pending.payables.purchases.total.toLocaleString() }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+
+        <!-- Pending Expenses -->
+        <Card v-if="reportData.pending.payables.expenses.data.length" class="mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-800">
+              Pending Expense Payments
+              <span class="text-sm font-normal text-gray-500">({{ reportData.pending.payables.expenses.count }})</span>
+            </h3>
+            <span class="font-bold text-red-600">₹{{ reportData.pending.payables.expenses.total.toLocaleString() }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Expense #</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Category</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="expense in reportData.pending.payables.expenses.data" :key="expense.id" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ expense.expense_number }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ expense.expense_date }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ expense.category }}</td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="px-2 py-0.5 text-xs rounded-full capitalize"
+                      :class="{
+                        'bg-red-100 text-red-700': expense.payment_status === 'pending',
+                        'bg-amber-100 text-amber-700': expense.payment_status === 'partial',
+                        'bg-green-100 text-green-700': expense.payment_status === 'paid'
+                      }"
+                    >
+                      {{ expense.payment_status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ expense.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="expense.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ expense.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="expense.balance_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ expense.balance_amount.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr>
+                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.expenses.data.reduce((sum, e) => sum + e.paid_amount, 0) > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.pending.payables.expenses.data.reduce((sum, e) => sum + e.paid_amount, 0).toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.expenses.total > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.pending.payables.expenses.total.toLocaleString() }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+
+        <!-- Pending Salaries -->
+        <Card v-if="reportData.pending.payables.salaries.data.length">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-800">
+              Pending Salary Payments
+              <span class="text-sm font-normal text-gray-500">({{ reportData.pending.payables.salaries.count }})</span>
+            </h3>
+            <span class="font-bold text-red-600">₹{{ reportData.pending.payables.salaries.total.toLocaleString() }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Employee</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Code</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Month/Year</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Net Salary</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="salary in reportData.pending.payables.salaries.data" :key="salary.id" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ salary.employee_name }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ salary.employee_code }}</td>
+                  <td class="px-3 py-2 text-gray-600">{{ salary.month_year }}</td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="px-2 py-0.5 text-xs rounded-full capitalize"
+                      :class="{
+                        'bg-red-100 text-red-700': salary.payment_status === 'pending',
+                        'bg-amber-100 text-amber-700': salary.payment_status === 'partial',
+                        'bg-green-100 text-green-700': salary.payment_status === 'paid'
+                      }"
+                    >
+                      {{ salary.payment_status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ salary.net_salary.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="salary.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ salary.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="salary.balance_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ salary.balance_amount.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr>
+                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.salaries.data.reduce((sum, s) => sum + s.paid_amount, 0) > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.pending.payables.salaries.data.reduce((sum, s) => sum + s.paid_amount, 0).toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.pending.payables.salaries.total > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.pending.payables.salaries.total.toLocaleString() }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      </div>
+
       <!-- Final Summary (Print Footer) -->
       <Card class="print:mt-8">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Summary - {{ reportData.period.display }}</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div class="p-4 bg-green-50 rounded-lg">
             <p class="text-sm text-green-700">Total Income</p>
             <p class="text-2xl font-bold text-green-600">{{ reportData.summary.total_income_formatted }}</p>
@@ -550,6 +830,26 @@ onMounted(fetchReport);
             <p class="text-2xl font-bold" :class="reportData.summary.net_balance >= 0 ? 'text-blue-600' : 'text-orange-600'">
               {{ reportData.summary.net_balance_formatted }}
             </p>
+          </div>
+        </div>
+
+        <!-- Pending Summary -->
+        <div v-if="reportData.pending && (reportData.pending.receivables.total > 0 || reportData.pending.payables.total > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+          <div class="p-4 bg-red-50 rounded-lg border border-red-200">
+            <p class="text-sm text-red-700">Pending Receivables</p>
+            <p class="text-xl font-bold text-red-600">{{ reportData.pending.receivables.total_formatted }}</p>
+            <div class="text-xs text-red-600 mt-1">
+              <div>Bookings: ₹{{ reportData.pending.receivables.bookings.total.toLocaleString() }} ({{ reportData.pending.receivables.bookings.count }})</div>
+            </div>
+          </div>
+          <div class="p-4 bg-red-50 rounded-lg border border-red-200">
+            <p class="text-sm text-red-700">Pending Payables</p>
+            <p class="text-xl font-bold text-red-600">{{ reportData.pending.payables.total_formatted }}</p>
+            <div class="text-xs text-red-600 mt-1">
+              <div>Purchases: ₹{{ reportData.pending.payables.purchases.total.toLocaleString() }} ({{ reportData.pending.payables.purchases.count }})</div>
+              <div>Expenses: ₹{{ reportData.pending.payables.expenses.total.toLocaleString() }} ({{ reportData.pending.payables.expenses.count }})</div>
+              <div>Salaries: ₹{{ reportData.pending.payables.salaries.total.toLocaleString() }} ({{ reportData.pending.payables.salaries.count }})</div>
+            </div>
           </div>
         </div>
       </Card>

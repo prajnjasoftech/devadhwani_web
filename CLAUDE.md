@@ -111,8 +111,12 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 ### 15. Reports
 - **Daily Report**: Income and expense summary for selected date range
 - **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, Custom Range
-- **Income Summary**: Bookings (pooja-wise), Donations
+- **Income Summary**: Bookings (pooja-wise) with Total/Paid/Pending columns, Donations
 - **Expense Summary**: Purchases, Other Expenses, Salaries, Employee Payments
+- **Pending Amounts Section**: Shows pending receivables and payables for the selected period
+  - Pending Receivables: Bookings with unpaid balances
+  - Pending Payables: Purchases, Expenses, Salaries with pending payments
+- **Color Coding**: Paid amounts in green, Pending amounts in red, Zero amounts in grey
 - **Print Support**: Thermal printer friendly output with temple name header
 - **Empty Section Hiding**: Sections with no data are hidden automatically
 
