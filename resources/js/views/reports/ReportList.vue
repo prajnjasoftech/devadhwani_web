@@ -383,12 +383,12 @@ onMounted(fetchReport);
           <span class="text-red-600">({{ reportData.expenses.total_formatted }})</span>
         </h2>
 
-        <!-- Purchases -->
+        <!-- Purchases (Category-wise) -->
         <Card v-if="reportData.expenses.purchases.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
-              Purchases
-              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.purchases.count }})</span>
+              Purchases (Category-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.purchases.count }} categories)</span>
             </h3>
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.purchases.total_paid.toLocaleString() }}</span>
           </div>
@@ -397,43 +397,40 @@ onMounted(fetchReport);
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Purchase #</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Vendor</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-500">Category</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Description</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Count</th>
                   <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
                   <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="purchase in reportData.expenses.purchases.data" :key="purchase.id" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-medium text-gray-900">{{ purchase.purchase_number }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ purchase.purchase_date }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ purchase.vendor_name }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ purchase.category }}</td>
-                  <td class="px-3 py-2 text-gray-600 max-w-xs truncate">{{ purchase.description || '-' }}</td>
-                  <td class="px-3 py-2 text-right text-gray-900">₹{{ purchase.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-red-600">₹{{ purchase.paid_amount.toLocaleString() }}</td>
+                <tr v-for="item in reportData.expenses.purchases.data" :key="item.category_name" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ item.category_name }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ item.count }}</td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ item.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ item.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.pending_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ item.pending_amount.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td colspan="2" class="px-3 py-2 font-semibold text-gray-700">Total</td>
                   <td class="px-3 py-2 text-right font-semibold text-gray-700">₹{{ reportData.expenses.purchases.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-bold text-red-600">₹{{ reportData.expenses.purchases.total_paid.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.expenses.purchases.total_paid > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.expenses.purchases.total_paid.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.expenses.purchases.total_pending > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.expenses.purchases.total_pending.toLocaleString() }}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </Card>
 
-        <!-- Expenses -->
+        <!-- Other Expenses (Category-wise) -->
         <Card v-if="reportData.expenses.expenses.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
-              Other Expenses
-              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.expenses.count }})</span>
+              Other Expenses (Category-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.expenses.count }} categories)</span>
             </h3>
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.expenses.total_paid.toLocaleString() }}</span>
           </div>
@@ -442,29 +439,28 @@ onMounted(fetchReport);
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Expense #</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-500">Category</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Description</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Count</th>
                   <th class="px-3 py-2 text-right font-medium text-gray-500">Total</th>
                   <th class="px-3 py-2 text-right font-medium text-gray-500">Paid</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Pending</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="expense in reportData.expenses.expenses.data" :key="expense.id" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-medium text-gray-900">{{ expense.expense_number }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ expense.expense_date }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ expense.category }}</td>
-                  <td class="px-3 py-2 text-gray-600 max-w-xs truncate">{{ expense.description || '-' }}</td>
-                  <td class="px-3 py-2 text-right text-gray-900">₹{{ expense.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-red-600">₹{{ expense.paid_amount.toLocaleString() }}</td>
+                <tr v-for="item in reportData.expenses.expenses.data" :key="item.category_name" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ item.category_name }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ item.count }}</td>
+                  <td class="px-3 py-2 text-right text-gray-900">₹{{ item.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.paid_amount > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ item.paid_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-medium" :class="item.pending_amount > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ item.pending_amount.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="4" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td colspan="2" class="px-3 py-2 font-semibold text-gray-700">Total</td>
                   <td class="px-3 py-2 text-right font-semibold text-gray-700">₹{{ reportData.expenses.expenses.total_amount.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-bold text-red-600">₹{{ reportData.expenses.expenses.total_paid.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.expenses.expenses.total_paid > 0 ? 'text-green-600' : 'text-gray-400'">₹{{ reportData.expenses.expenses.total_paid.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-right font-bold" :class="reportData.expenses.expenses.total_pending > 0 ? 'text-red-600' : 'text-gray-400'">₹{{ reportData.expenses.expenses.total_pending.toLocaleString() }}</td>
                 </tr>
               </tfoot>
             </table>
