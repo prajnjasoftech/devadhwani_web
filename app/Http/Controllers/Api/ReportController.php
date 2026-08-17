@@ -86,27 +86,35 @@ class ReportController extends Controller
             ];
         })->sortByDesc('total_amount')->values()->toArray();
 
-        // Donations (filter by donation_date)
-        $donations = Donation::where('temple_id', $templeId)
+        // Donations (filter by donation_date) - grouped by type and head/asset
+        $donationsQuery = Donation::where('temple_id', $templeId)
             ->whereBetween('donation_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['donationHead:id,name', 'assetType:id,name'])
-            ->orderBy('donation_date')
-            ->get()
-            ->map(function ($donation) {
+            ->get();
+
+        // Group financial donations by head
+        $financialDonations = $donationsQuery->where('donation_type', 'financial')
+            ->groupBy(function ($donation) {
+                return $donation->donationHead->name ?? 'General';
+            })->map(function ($items, $headName) {
                 return [
-                    'id' => $donation->id,
-                    'donation_number' => $donation->donation_number,
-                    'donation_date' => $donation->donation_date->format('d M Y'),
-                    'donor_name' => $donation->donor_name,
-                    'donor_contact' => $donation->donor_contact,
-                    'donation_type' => $donation->donation_type,
-                    'head_name' => $donation->donationHead->name ?? null,
-                    'asset_type' => $donation->assetType->name ?? null,
-                    'amount' => round($donation->amount ?? 0, 2),
-                    'estimated_value' => round($donation->estimated_value ?? 0, 2),
-                    'payment_method' => $donation->payment_method,
+                    'head_name' => $headName,
+                    'count' => $items->count(),
+                    'total_amount' => round($items->sum('amount'), 2),
                 ];
-            });
+            })->sortByDesc('total_amount')->values();
+
+        // Group asset donations by asset type
+        $assetDonations = $donationsQuery->where('donation_type', 'asset')
+            ->groupBy(function ($donation) {
+                return $donation->assetType->name ?? 'Other';
+            })->map(function ($items, $assetType) {
+                return [
+                    'asset_type' => $assetType,
+                    'count' => $items->count(),
+                    'total_value' => round($items->sum('estimated_value'), 2),
+                ];
+            })->sortByDesc('total_value')->values();
 
         // EXPENSE SECTION
 
@@ -189,8 +197,8 @@ class ReportController extends Controller
         $totalBookingAmount = array_sum(array_column($bookings, 'total_amount'));
         $totalBookingPaid = array_sum(array_column($bookings, 'paid_amount'));
         $totalBookingPending = array_sum(array_column($bookings, 'pending_amount'));
-        $totalDonationAmount = $donations->where('donation_type', 'financial')->sum('amount');
-        $totalDonationAssetValue = $donations->where('donation_type', 'asset')->sum('estimated_value');
+        $totalDonationAmount = $financialDonations->sum('total_amount');
+        $totalDonationAssetValue = $assetDonations->sum('total_value');
 
         $totalPurchaseAmount = $purchases->sum('total_amount');
         $totalPurchasePaid = $purchases->sum('paid_amount');
@@ -321,10 +329,16 @@ class ReportController extends Controller
                         'total_pending' => round($totalBookingPending, 2),
                     ],
                     'donations' => [
-                        'data' => $donations->values()->toArray(),
-                        'count' => $donations->count(),
-                        'financial_count' => $donations->where('donation_type', 'financial')->count(),
-                        'asset_count' => $donations->where('donation_type', 'asset')->count(),
+                        'financial' => [
+                            'data' => $financialDonations->toArray(),
+                            'count' => $financialDonations->sum('count'),
+                            'total_amount' => round($totalDonationAmount, 2),
+                        ],
+                        'asset' => [
+                            'data' => $assetDonations->toArray(),
+                            'count' => $assetDonations->sum('count'),
+                            'total_value' => round($totalDonationAssetValue, 2),
+                        ],
                         'total_amount' => round($totalDonationAmount, 2),
                         'total_asset_value' => round($totalDonationAssetValue, 2),
                     ],
