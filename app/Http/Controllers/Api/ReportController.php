@@ -110,47 +110,41 @@ class ReportController extends Controller
 
         // EXPENSE SECTION
 
-        // Purchases (filter by purchase_date)
-        $purchases = Purchase::where('temple_id', $templeId)
+        // Purchases (filter by purchase_date) - grouped by category
+        $purchasesQuery = Purchase::where('temple_id', $templeId)
             ->whereBetween('purchase_date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->with(['vendor:id,name', 'category:id,name', 'purpose:id,name'])
-            ->orderBy('purchase_date')
-            ->get()
-            ->map(function ($purchase) {
-                return [
-                    'id' => $purchase->id,
-                    'purchase_number' => $purchase->purchase_number,
-                    'purchase_date' => $purchase->purchase_date->format('d M Y'),
-                    'vendor_name' => $purchase->vendor->name ?? 'N/A',
-                    'category' => $purchase->category->name ?? 'N/A',
-                    'purpose' => $purchase->purpose->name ?? 'N/A',
-                    'description' => $purchase->description,
-                    'total_amount' => round($purchase->total_amount, 2),
-                    'paid_amount' => round($purchase->paid_amount, 2),
-                    'balance_amount' => round($purchase->balance_amount, 2),
-                    'payment_status' => $purchase->payment_status,
-                ];
-            });
+            ->with(['category:id,name'])
+            ->get();
 
-        // Expenses (filter by expense_date)
-        $expenses = Expense::where('temple_id', $templeId)
+        $purchases = $purchasesQuery->groupBy(function ($purchase) {
+            return $purchase->category->name ?? 'Uncategorized';
+        })->map(function ($items, $categoryName) {
+            return [
+                'category_name' => $categoryName,
+                'count' => $items->count(),
+                'total_amount' => round($items->sum('total_amount'), 2),
+                'paid_amount' => round($items->sum('paid_amount'), 2),
+                'pending_amount' => round($items->sum('balance_amount'), 2),
+            ];
+        })->sortByDesc('total_amount')->values();
+
+        // Expenses (filter by expense_date) - grouped by category
+        $expensesQuery = Expense::where('temple_id', $templeId)
             ->whereBetween('expense_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with(['category:id,name'])
-            ->orderBy('expense_date')
-            ->get()
-            ->map(function ($expense) {
-                return [
-                    'id' => $expense->id,
-                    'expense_number' => $expense->expense_number,
-                    'expense_date' => $expense->expense_date->format('d M Y'),
-                    'category' => $expense->category->name ?? 'N/A',
-                    'description' => $expense->description,
-                    'total_amount' => round($expense->amount, 2),
-                    'paid_amount' => round($expense->paid_amount, 2),
-                    'balance_amount' => round($expense->balance_amount, 2),
-                    'payment_status' => $expense->payment_status,
-                ];
-            });
+            ->get();
+
+        $expenses = $expensesQuery->groupBy(function ($expense) {
+            return $expense->category->name ?? 'Uncategorized';
+        })->map(function ($items, $categoryName) {
+            return [
+                'category_name' => $categoryName,
+                'count' => $items->count(),
+                'total_amount' => round($items->sum('amount'), 2),
+                'paid_amount' => round($items->sum('paid_amount'), 2),
+                'pending_amount' => round($items->sum('balance_amount'), 2),
+            ];
+        })->sortByDesc('total_amount')->values();
 
         // Employee Salaries (filter by payment_date)
         $salaries = EmployeeSalary::where('temple_id', $templeId)
@@ -200,8 +194,10 @@ class ReportController extends Controller
 
         $totalPurchaseAmount = $purchases->sum('total_amount');
         $totalPurchasePaid = $purchases->sum('paid_amount');
+        $totalPurchasePending = $purchases->sum('pending_amount');
         $totalExpenseAmount = $expenses->sum('total_amount');
         $totalExpensePaid = $expenses->sum('paid_amount');
+        $totalExpensePending = $expenses->sum('pending_amount');
         $totalSalaryPaid = $salaries->sum('net_salary');
         $totalEmployeePayments = $employeePayments->sum('amount');
 
@@ -341,12 +337,14 @@ class ReportController extends Controller
                         'count' => $purchases->count(),
                         'total_amount' => round($totalPurchaseAmount, 2),
                         'total_paid' => round($totalPurchasePaid, 2),
+                        'total_pending' => round($totalPurchasePending, 2),
                     ],
                     'expenses' => [
                         'data' => $expenses->values()->toArray(),
                         'count' => $expenses->count(),
                         'total_amount' => round($totalExpenseAmount, 2),
                         'total_paid' => round($totalExpensePaid, 2),
+                        'total_pending' => round($totalExpensePending, 2),
                     ],
                     'salaries' => [
                         'data' => $salaries->values()->toArray(),
