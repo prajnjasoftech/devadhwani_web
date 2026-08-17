@@ -109,7 +109,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - **Super Admin Only**: Only temple Super Admin can access ledger
 
 ### 15. Reports
-- **Daily Report**: Income and expense summary for selected date range
+- **Financial Report**: Income and expense summary for selected date range
 - **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, This Year, Custom Range
 - **Visual Charts** (using vue3-apexcharts):
   - Income vs Expenses donut chart with net balance in center
