@@ -110,7 +110,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 
 ### 15. Reports
 - **Daily Report**: Income and expense summary for selected date range
-- **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, Custom Range
+- **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, This Year, Custom Range
 - **Visual Charts** (using vue3-apexcharts):
   - Income vs Expenses donut chart with net balance in center
   - Category breakdown horizontal bar chart (Bookings, Donations, Purchases, Expenses, etc.)

@@ -24,13 +24,14 @@ const authStore = useAuthStore();
 const loading = ref(true);
 const reportData = ref(null);
 
-// Date filter options (same as dashboard)
+// Date filter options
 const filterOptions = [
   { value: 'today', label: 'Today' },
   { value: 'yesterday', label: 'Yesterday' },
   { value: 'this_week', label: 'This Week' },
   { value: 'this_month', label: 'This Month' },
   { value: 'last_month', label: 'Last Month' },
+  { value: 'this_year', label: 'This Year' },
   { value: 'custom', label: 'Custom Range' },
 ];
 
@@ -84,6 +85,14 @@ const dateRange = computed(() => {
     case 'last_month': {
       const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const end = new Date(today.getFullYear(), today.getMonth(), 0);
+      return {
+        start_date: formatDate(start),
+        end_date: formatDate(end),
+      };
+    }
+    case 'this_year': {
+      const start = new Date(today.getFullYear(), 0, 1);
+      const end = new Date(today.getFullYear(), 11, 31);
       return {
         start_date: formatDate(start),
         end_date: formatDate(end),
