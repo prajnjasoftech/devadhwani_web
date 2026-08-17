@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth';
 import api from '@/composables/useApi';
 import Card from '@/components/ui/Card.vue';
 import Button from '@/components/ui/Button.vue';
+import VueApexCharts from 'vue3-apexcharts';
 import {
   CalendarIcon,
   PrinterIcon,
@@ -114,9 +115,35 @@ const fetchReport = async () => {
   }
 };
 
-// Print report
+// Print report with custom filename
 const printReport = () => {
-  window.print();
+  const originalTitle = document.title;
+  const { start_date, end_date } = dateRange.value;
+
+  // Set filename based on date range
+  let newTitle;
+  if (start_date === end_date) {
+    newTitle = `Report-${start_date}`;
+  } else {
+    newTitle = `Report-${start_date}-to-${end_date}`;
+  }
+
+  document.title = newTitle;
+
+  // Force browser to recognize title change
+  document.head.querySelector('title').textContent = newTitle;
+
+  // Restore title after print dialog closes
+  const restoreTitle = () => {
+    document.title = originalTitle;
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+  window.addEventListener('afterprint', restoreTitle);
+
+  // Delay to ensure Chrome picks up title change
+  requestAnimationFrame(() => {
+    window.print();
+  });
 };
 
 // Watch for filter change
@@ -131,6 +158,143 @@ watch([customStartDate, customEndDate], () => {
   if (selectedFilter.value === 'custom' && customStartDate.value && customEndDate.value) {
     fetchReport();
   }
+});
+
+// Chart computed properties
+const incomeVsExpenseChart = computed(() => {
+  if (!reportData.value) return null;
+  const income = reportData.value.summary.total_income || 0;
+  const expense = reportData.value.summary.total_expenses || 0;
+  if (income === 0 && expense === 0) return null;
+
+  return {
+    series: [income, expense],
+    options: {
+      chart: { type: 'donut', height: 280 },
+      labels: ['Income', 'Expenses'],
+      colors: ['#16a34a', '#dc2626'],
+      legend: { position: 'bottom' },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '60%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Net',
+                formatter: () => `₹${(income - expense).toLocaleString()}`
+              }
+            }
+          }
+        }
+      },
+      dataLabels: {
+        formatter: (val, opts) => {
+          const value = opts.w.config.series[opts.seriesIndex];
+          return `₹${value.toLocaleString()}`;
+        }
+      }
+    }
+  };
+});
+
+const categoryBreakdownChart = computed(() => {
+  if (!reportData.value) return null;
+
+  const categories = [];
+  const amounts = [];
+  const colors = [];
+
+  // Income categories
+  if (reportData.value.income.bookings.total_paid > 0) {
+    categories.push('Bookings');
+    amounts.push(reportData.value.income.bookings.total_paid);
+    colors.push('#22c55e');
+  }
+  if (reportData.value.income.donations.total_amount > 0) {
+    categories.push('Donations');
+    amounts.push(reportData.value.income.donations.total_amount);
+    colors.push('#a855f7');
+  }
+
+  // Expense categories
+  if (reportData.value.expenses.purchases.total_paid > 0) {
+    categories.push('Purchases');
+    amounts.push(reportData.value.expenses.purchases.total_paid);
+    colors.push('#ef4444');
+  }
+  if (reportData.value.expenses.expenses.total_paid > 0) {
+    categories.push('Expenses');
+    amounts.push(reportData.value.expenses.expenses.total_paid);
+    colors.push('#f97316');
+  }
+  if (reportData.value.expenses.salaries.total_paid > 0) {
+    categories.push('Salaries');
+    amounts.push(reportData.value.expenses.salaries.total_paid);
+    colors.push('#eab308');
+  }
+  if (reportData.value.expenses.employee_payments.total_paid > 0) {
+    categories.push('Employee Payments');
+    amounts.push(reportData.value.expenses.employee_payments.total_paid);
+    colors.push('#f59e0b');
+  }
+
+  if (categories.length === 0) return null;
+
+  return {
+    series: [{ name: 'Amount', data: amounts }],
+    options: {
+      chart: { type: 'bar', height: 280 },
+      plotOptions: {
+        bar: { horizontal: true, borderRadius: 4, distributed: true }
+      },
+      colors: colors,
+      xaxis: { categories: categories },
+      yaxis: { labels: { style: { fontSize: '12px' } } },
+      dataLabels: {
+        formatter: (val) => `₹${val.toLocaleString()}`
+      },
+      legend: { show: false },
+      tooltip: {
+        y: { formatter: (val) => `₹${val.toLocaleString()}` }
+      }
+    }
+  };
+});
+
+const paidVsPendingChart = computed(() => {
+  if (!reportData.value || !reportData.value.pending) return null;
+
+  const bookingsPaid = reportData.value.income.bookings.total_paid || 0;
+  const bookingsPending = reportData.value.income.bookings.total_pending || 0;
+  const purchasesPaid = reportData.value.expenses.purchases.total_paid || 0;
+  const purchasesPending = reportData.value.expenses.purchases.total_pending || 0;
+  const expensesPaid = reportData.value.expenses.expenses.total_paid || 0;
+  const expensesPending = reportData.value.expenses.expenses.total_pending || 0;
+
+  if (bookingsPaid === 0 && bookingsPending === 0 && purchasesPaid === 0 && purchasesPending === 0 && expensesPaid === 0 && expensesPending === 0) {
+    return null;
+  }
+
+  return {
+    series: [
+      { name: 'Paid', data: [bookingsPaid, purchasesPaid, expensesPaid] },
+      { name: 'Pending', data: [bookingsPending, purchasesPending, expensesPending] }
+    ],
+    options: {
+      chart: { type: 'bar', height: 280, stacked: true },
+      plotOptions: { bar: { horizontal: false, borderRadius: 4 } },
+      colors: ['#22c55e', '#ef4444'],
+      xaxis: { categories: ['Bookings', 'Purchases', 'Expenses'] },
+      yaxis: { labels: { formatter: (val) => `₹${val.toLocaleString()}` } },
+      legend: { position: 'top' },
+      dataLabels: { enabled: false },
+      tooltip: {
+        y: { formatter: (val) => `₹${val.toLocaleString()}` }
+      }
+    }
+  };
 });
 
 onMounted(fetchReport);
@@ -263,6 +427,42 @@ onMounted(fetchReport);
               <ExclamationTriangleIcon class="w-6 h-6 text-red-600" />
             </div>
           </div>
+        </Card>
+      </div>
+
+      <!-- Visual Charts -->
+      <div v-if="incomeVsExpenseChart || categoryBreakdownChart || paidVsPendingChart" class="charts-container grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <!-- Income vs Expense Donut Chart -->
+        <Card v-if="incomeVsExpenseChart" class="chart-card">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Income vs Expenses</h3>
+          <VueApexCharts
+            type="donut"
+            :options="incomeVsExpenseChart.options"
+            :series="incomeVsExpenseChart.series"
+            height="250"
+          />
+        </Card>
+
+        <!-- Category-wise Bar Chart -->
+        <Card v-if="categoryBreakdownChart" class="chart-card">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Category Breakdown</h3>
+          <VueApexCharts
+            type="bar"
+            :options="categoryBreakdownChart.options"
+            :series="categoryBreakdownChart.series"
+            height="250"
+          />
+        </Card>
+
+        <!-- Paid vs Pending Stacked Bar -->
+        <Card v-if="paidVsPendingChart" class="chart-card">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Paid vs Pending</h3>
+          <VueApexCharts
+            type="bar"
+            :options="paidVsPendingChart.options"
+            :series="paidVsPendingChart.series"
+            height="250"
+          />
         </Card>
       </div>
 
@@ -881,6 +1081,24 @@ onMounted(fetchReport);
     font-size: 14px;
     color: #000;
     font-weight: 500;
+  }
+
+  /* Charts grid - force 3 columns in print */
+  .charts-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    page-break-inside: avoid;
+  }
+
+  .chart-card {
+    padding: 8px !important;
+    break-inside: avoid;
+  }
+
+  /* Reduce chart size for print */
+  .chart-card .apexcharts-canvas {
+    max-height: 200px !important;
   }
 
   body {
