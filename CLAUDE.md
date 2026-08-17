@@ -123,12 +123,14 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - **Expense Summary**:
   - Purchases (category-wise): Grouped by purchase category with count, total, paid, pending
   - Other Expenses (category-wise): Grouped by expense category with count, total, paid, pending
-  - Salaries, Employee Payments
+  - Salaries (employee-wise): Grouped by employee with count, total paid
+  - Employee Payments
 - **Pending Amounts Section**: Shows pending receivables and payables for the selected period
   - Pending Receivables: Bookings with unpaid balances
   - Pending Payables: Purchases, Expenses, Salaries with pending payments
 - **Color Coding**: Paid amounts in green, Pending amounts in red, Zero amounts in grey
 - **Print Support**: Thermal printer friendly output with temple name header
+- **Print Totals**: Section totals show only once at end of each section (not repeated per page)
 - **PDF Filename**: Custom filename based on date range when saving as PDF
 - **Empty Section Hiding**: Sections with no data are hidden automatically
 
