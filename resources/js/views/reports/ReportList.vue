@@ -15,6 +15,7 @@ import {
   CurrencyRupeeIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  GiftIcon,
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
@@ -467,7 +468,7 @@ onMounted(fetchReport);
       </div>
 
       <!-- INCOME SECTION -->
-      <div v-if="reportData.income.bookings.data.length || reportData.income.donations.data.length" class="mb-8">
+      <div v-if="reportData.income.bookings.data.length || reportData.income.donations.financial.data.length || reportData.income.donations.asset.data.length" class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <ArrowTrendingUpIcon class="w-6 h-6 text-green-600" />
           Income
@@ -519,55 +520,76 @@ onMounted(fetchReport);
           </div>
         </Card>
 
-        <!-- Donations -->
-        <Card v-if="reportData.income.donations.data.length">
+        <!-- Financial Donations (Head-wise) -->
+        <Card v-if="reportData.income.donations.financial.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <CurrencyRupeeIcon class="w-5 h-5 text-purple-600" />
-              Donations
-              <span class="text-sm font-normal text-gray-500">({{ reportData.income.donations.count }} donations)</span>
+              Financial Donations (Head-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.income.donations.financial.count }} donations)</span>
             </h3>
-            <span class="text-lg font-bold text-green-600">₹{{ reportData.income.donations.total_amount.toLocaleString() }}</span>
+            <span class="text-lg font-bold text-green-600">₹{{ reportData.income.donations.financial.total_amount.toLocaleString() }}</span>
           </div>
 
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Donation #</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Date</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Donor</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Type</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Head/Asset</th>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Donation Head</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Count</th>
                   <th class="px-3 py-2 text-right font-medium text-gray-500">Amount</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="donation in reportData.income.donations.data" :key="donation.id" class="hover:bg-gray-50">
-                  <td class="px-3 py-2 font-medium text-gray-900">{{ donation.donation_number }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ donation.donation_date }}</td>
-                  <td class="px-3 py-2 text-gray-600">
-                    <div>{{ donation.donor_name || 'Anonymous' }}</div>
-                    <div class="text-xs text-gray-400">{{ donation.donor_contact || '' }}</div>
-                  </td>
-                  <td class="px-3 py-2">
-                    <span
-                      class="px-2 py-0.5 text-xs rounded-full"
-                      :class="donation.donation_type === 'financial' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
-                    >
-                      {{ donation.donation_type }}
-                    </span>
-                  </td>
-                  <td class="px-3 py-2 text-gray-600">{{ donation.head_name || donation.asset_type || '-' }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-green-600">
-                    ₹{{ (donation.amount || donation.estimated_value || 0).toLocaleString() }}
-                  </td>
+                <tr v-for="item in reportData.income.donations.financial.data" :key="item.head_name" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ item.head_name }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ item.count }}</td>
+                  <td class="px-3 py-2 text-right font-medium text-green-600">₹{{ item.total_amount.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="5" class="px-3 py-2 font-semibold text-gray-700">Total Financial Donations</td>
-                  <td class="px-3 py-2 text-right font-bold text-green-600">₹{{ reportData.income.donations.total_amount.toLocaleString() }}</td>
+                  <td class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-center font-semibold text-gray-700">{{ reportData.income.donations.financial.count }}</td>
+                  <td class="px-3 py-2 text-right font-bold text-green-600">₹{{ reportData.income.donations.financial.total_amount.toLocaleString() }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+
+        <!-- Asset Donations (Type-wise) -->
+        <Card v-if="reportData.income.donations.asset.data.length">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <GiftIcon class="w-5 h-5 text-amber-600" />
+              Asset Donations (Type-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.income.donations.asset.count }} donations)</span>
+            </h3>
+            <span class="text-lg font-bold text-amber-600">₹{{ reportData.income.donations.asset.total_value.toLocaleString() }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2 text-left font-medium text-gray-500">Asset Type</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Count</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Est. Value</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="item in reportData.income.donations.asset.data" :key="item.asset_type" class="hover:bg-gray-50">
+                  <td class="px-3 py-2 font-medium text-gray-900">{{ item.asset_type }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ item.count }}</td>
+                  <td class="px-3 py-2 text-right font-medium text-amber-600">₹{{ item.total_value.toLocaleString() }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr>
+                  <td class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td class="px-3 py-2 text-center font-semibold text-gray-700">{{ reportData.income.donations.asset.count }}</td>
+                  <td class="px-3 py-2 text-right font-bold text-amber-600">₹{{ reportData.income.donations.asset.total_value.toLocaleString() }}</td>
                 </tr>
               </tfoot>
             </table>
