@@ -1107,6 +1107,11 @@ onMounted(fetchReport);
     font-weight: 500;
   }
 
+  /* Prevent tfoot from repeating on every page */
+  tfoot {
+    display: table-row-group;
+  }
+
   /* Charts grid - force 3 columns in print */
   .charts-container {
     display: grid !important;
