@@ -154,26 +154,24 @@ class ReportController extends Controller
             ];
         })->sortByDesc('total_amount')->values();
 
-        // Employee Salaries (filter by payment_date)
-        $salaries = EmployeeSalary::where('temple_id', $templeId)
+        // Employee Salaries (filter by payment_date) - grouped by employee
+        $salariesQuery = EmployeeSalary::where('temple_id', $templeId)
             ->whereBetween('payment_date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('payment_status', 'paid')
             ->with(['employee:id,name,employee_code'])
-            ->orderBy('payment_date')
-            ->get()
-            ->map(function ($salary) {
-                $grossSalary = ($salary->basic_salary ?? 0) + ($salary->allowances ?? 0);
-                return [
-                    'id' => $salary->id,
-                    'employee_name' => $salary->employee->name ?? 'N/A',
-                    'employee_code' => $salary->employee->employee_code ?? 'N/A',
-                    'month_year' => $salary->month . '/' . $salary->year,
-                    'payment_date' => $salary->payment_date?->format('d M Y'),
-                    'gross_salary' => round($grossSalary, 2),
-                    'deductions' => round($salary->deductions ?? 0, 2),
-                    'net_salary' => round($salary->net_salary ?? 0, 2),
-                ];
-            });
+            ->get();
+
+        $salaries = $salariesQuery->groupBy(function ($salary) {
+            return $salary->employee->name ?? 'Unknown';
+        })->map(function ($items, $employeeName) {
+            $employee = $items->first()->employee;
+            return [
+                'employee_name' => $employeeName,
+                'employee_code' => $employee->employee_code ?? 'N/A',
+                'count' => $items->count(),
+                'total_net_salary' => round($items->sum('net_salary'), 2),
+            ];
+        })->sortByDesc('total_net_salary')->values();
 
         // Employee Other Payments (filter by payment_date)
         $employeePayments = EmployeePayment::where('temple_id', $templeId)
@@ -206,7 +204,7 @@ class ReportController extends Controller
         $totalExpenseAmount = $expenses->sum('total_amount');
         $totalExpensePaid = $expenses->sum('paid_amount');
         $totalExpensePending = $expenses->sum('pending_amount');
-        $totalSalaryPaid = $salaries->sum('net_salary');
+        $totalSalaryPaid = $salaries->sum('total_net_salary');
         $totalEmployeePayments = $employeePayments->sum('amount');
 
         $totalIncome = $totalBookingPaid + $totalDonationAmount;

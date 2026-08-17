@@ -92,10 +92,9 @@ const dateRange = computed(() => {
     }
     case 'this_year': {
       const start = new Date(today.getFullYear(), 0, 1);
-      const end = new Date(today.getFullYear(), 11, 31);
       return {
         start_date: formatDate(start),
-        end_date: formatDate(end),
+        end_date: formatDate(today),
       };
     }
     case 'custom':
@@ -698,12 +697,12 @@ onMounted(fetchReport);
           </div>
         </Card>
 
-        <!-- Salaries -->
+        <!-- Salaries (Employee-wise) -->
         <Card v-if="reportData.expenses.salaries.data.length" class="mb-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">
-              Salaries Paid
-              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.salaries.count }})</span>
+              Salaries Paid (Employee-wise)
+              <span class="text-sm font-normal text-gray-500">({{ reportData.expenses.salaries.count }} employees)</span>
             </h3>
             <span class="text-lg font-bold text-red-600">₹{{ reportData.expenses.salaries.total_paid.toLocaleString() }}</span>
           </div>
@@ -714,27 +713,21 @@ onMounted(fetchReport);
                 <tr>
                   <th class="px-3 py-2 text-left font-medium text-gray-500">Employee</th>
                   <th class="px-3 py-2 text-left font-medium text-gray-500">Code</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Month/Year</th>
-                  <th class="px-3 py-2 text-left font-medium text-gray-500">Payment Date</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Gross</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Deductions</th>
-                  <th class="px-3 py-2 text-right font-medium text-gray-500">Net Paid</th>
+                  <th class="px-3 py-2 text-center font-medium text-gray-500">Months</th>
+                  <th class="px-3 py-2 text-right font-medium text-gray-500">Total Paid</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="salary in reportData.expenses.salaries.data" :key="salary.id" class="hover:bg-gray-50">
+                <tr v-for="salary in reportData.expenses.salaries.data" :key="salary.employee_name" class="hover:bg-gray-50">
                   <td class="px-3 py-2 font-medium text-gray-900">{{ salary.employee_name }}</td>
                   <td class="px-3 py-2 text-gray-600">{{ salary.employee_code }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ salary.month_year }}</td>
-                  <td class="px-3 py-2 text-gray-600">{{ salary.payment_date }}</td>
-                  <td class="px-3 py-2 text-right text-gray-900">₹{{ salary.gross_salary.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right text-gray-600">₹{{ salary.deductions.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-medium text-red-600">₹{{ salary.net_salary.toLocaleString() }}</td>
+                  <td class="px-3 py-2 text-center text-gray-600">{{ salary.count }}</td>
+                  <td class="px-3 py-2 text-right font-medium text-red-600">₹{{ salary.total_net_salary.toLocaleString() }}</td>
                 </tr>
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="6" class="px-3 py-2 font-semibold text-gray-700">Total</td>
+                  <td colspan="3" class="px-3 py-2 font-semibold text-gray-700">Total</td>
                   <td class="px-3 py-2 text-right font-bold text-red-600">₹{{ reportData.expenses.salaries.total_paid.toLocaleString() }}</td>
                 </tr>
               </tfoot>
