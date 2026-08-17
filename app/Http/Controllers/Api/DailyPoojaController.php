@@ -21,19 +21,27 @@ class DailyPoojaController extends Controller
     {
         $date = $request->get('date', now()->toDateString());
         $templeId = auth()->user()->temple_id;
+        $deityId = $request->get('deity_id');
+        $poojaId = $request->get('pooja_id');
 
-        $grouped = $this->bookingService->getDailySchedule($templeId, $date);
+        $grouped = $this->bookingService->getDailySchedule($templeId, $date, $deityId, $poojaId);
 
-        // Get summary counts
-        $totalPending = BookingSchedule::forTemple($templeId)
-            ->forDate($date)
-            ->pending()
-            ->count();
+        // Get summary counts (with filters applied)
+        $scheduleQuery = BookingSchedule::forTemple($templeId)->forDate($date);
 
-        $totalCompleted = BookingSchedule::forTemple($templeId)
-            ->forDate($date)
-            ->completed()
-            ->count();
+        if ($deityId || $poojaId) {
+            $scheduleQuery->whereHas('bookingItem', function ($query) use ($deityId, $poojaId) {
+                if ($deityId) {
+                    $query->where('deity_id', $deityId);
+                }
+                if ($poojaId) {
+                    $query->where('pooja_id', $poojaId);
+                }
+            });
+        }
+
+        $totalPending = (clone $scheduleQuery)->pending()->count();
+        $totalCompleted = (clone $scheduleQuery)->completed()->count();
 
         return response()->json([
             'success' => true,

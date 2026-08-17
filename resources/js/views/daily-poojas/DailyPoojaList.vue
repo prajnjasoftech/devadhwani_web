@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   UserIcon,
   PrinterIcon,
+  FunnelIcon,
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
@@ -23,6 +24,12 @@ const data = ref(null);
 const selectedDate = ref(new Date().toISOString().split('T')[0]);
 const selectedSchedules = ref([]);
 const completing = ref(false);
+
+// Filters
+const deities = ref([]);
+const poojas = ref([]);
+const selectedDeity = ref('');
+const selectedPooja = ref('');
 
 const formattedDate = computed(() => {
   const date = new Date(selectedDate.value);
@@ -46,15 +53,41 @@ const fetchSchedules = async () => {
   loading.value = true;
   selectedSchedules.value = [];
   try {
-    const response = await api.get('/daily-poojas', {
-      params: { date: selectedDate.value },
-    });
+    const params = { date: selectedDate.value };
+    if (selectedDeity.value) params.deity_id = selectedDeity.value;
+    if (selectedPooja.value) params.pooja_id = selectedPooja.value;
+
+    const response = await api.get('/daily-poojas', { params });
     data.value = response.data.data;
   } catch (error) {
     uiStore.showToast('Failed to fetch schedules', 'error');
   } finally {
     loading.value = false;
   }
+};
+
+const fetchDeities = async () => {
+  try {
+    const response = await api.get('/deities', { params: { per_page: 100 } });
+    deities.value = response.data.data.data || response.data.data || [];
+  } catch (error) {
+    console.error('Failed to fetch deities:', error);
+  }
+};
+
+const fetchPoojas = async () => {
+  try {
+    // Use /poojas/all endpoint which returns poojas sorted by booking count (most used first)
+    const response = await api.get('/poojas/all');
+    poojas.value = response.data.data || [];
+  } catch (error) {
+    console.error('Failed to fetch poojas:', error);
+  }
+};
+
+const clearFilters = () => {
+  selectedDeity.value = '';
+  selectedPooja.value = '';
 };
 
 const previousDay = () => {
@@ -167,8 +200,14 @@ const poojasGroupedByDeity = computed(() => {
 });
 
 watch(selectedDate, fetchSchedules);
+watch(selectedDeity, fetchSchedules);
+watch(selectedPooja, fetchSchedules);
 
-onMounted(fetchSchedules);
+onMounted(() => {
+  fetchDeities();
+  fetchPoojas();
+  fetchSchedules();
+});
 </script>
 
 <template>
@@ -185,7 +224,7 @@ onMounted(fetchSchedules);
     </div>
 
     <!-- Date Navigation -->
-    <Card class="mb-6 print:hidden">
+    <Card class="mb-4 print:hidden">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <button
@@ -226,6 +265,47 @@ onMounted(fetchSchedules);
               {{ data.summary.completed }} completed
             </span>
           </div>
+        </div>
+      </div>
+    </Card>
+
+    <!-- Filters -->
+    <Card class="mb-6 print:hidden">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+          <FunnelIcon class="w-5 h-5 text-gray-400" />
+          <span class="text-sm font-medium text-gray-700">Filter by:</span>
+        </div>
+
+        <div class="flex-1 flex flex-wrap items-center gap-3">
+          <select
+            v-model="selectedDeity"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">All Deities</option>
+            <option v-for="deity in deities" :key="deity.id" :value="deity.id">
+              {{ deity.name }}
+            </option>
+          </select>
+
+          <select
+            v-model="selectedPooja"
+            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">All Poojas</option>
+            <option v-for="pooja in poojas" :key="pooja.id" :value="pooja.id">
+              {{ pooja.name }}
+            </option>
+          </select>
+
+          <Button
+            v-if="selectedDeity || selectedPooja"
+            variant="ghost"
+            size="sm"
+            @click="clearFilters"
+          >
+            Clear Filters
+          </Button>
         </div>
       </div>
     </Card>
