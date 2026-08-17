@@ -5,7 +5,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 
 ## Technology Stack
 - **Backend**: Laravel 11, PHP 8.2, Sanctum authentication
-- **Frontend**: Vue 3 (Composition API), Vite, Tailwind CSS, Pinia
+- **Frontend**: Vue 3 (Composition API), Vite, Tailwind CSS, Pinia, ApexCharts
 - **Database**: MySQL with single-DB multi-tenancy via `temple_id`
 
 ## Current Modules
@@ -111,6 +111,11 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 ### 15. Reports
 - **Daily Report**: Income and expense summary for selected date range
 - **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, Custom Range
+- **Visual Charts** (using vue3-apexcharts):
+  - Income vs Expenses donut chart with net balance in center
+  - Category breakdown horizontal bar chart (Bookings, Donations, Purchases, Expenses, etc.)
+  - Paid vs Pending stacked bar chart for Bookings, Purchases, Expenses
+  - Charts visible on screen and in print/PDF
 - **Income Summary**: Bookings (pooja-wise) with Total/Paid/Pending columns, Donations
 - **Expense Summary**:
   - Purchases (category-wise): Grouped by purchase category with count, total, paid, pending
@@ -121,6 +126,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
   - Pending Payables: Purchases, Expenses, Salaries with pending payments
 - **Color Coding**: Paid amounts in green, Pending amounts in red, Zero amounts in grey
 - **Print Support**: Thermal printer friendly output with temple name header
+- **PDF Filename**: Custom filename based on date range when saving as PDF
 - **Empty Section Hiding**: Sections with no data are hidden automatically
 
 ### 16. Daily Poojas
