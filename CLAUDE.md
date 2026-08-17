@@ -112,7 +112,10 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 - **Daily Report**: Income and expense summary for selected date range
 - **Date Filters**: Today, Yesterday, This Week, This Month, Last Month, Custom Range
 - **Income Summary**: Bookings (pooja-wise) with Total/Paid/Pending columns, Donations
-- **Expense Summary**: Purchases, Other Expenses, Salaries, Employee Payments
+- **Expense Summary**:
+  - Purchases (category-wise): Grouped by purchase category with count, total, paid, pending
+  - Other Expenses (category-wise): Grouped by expense category with count, total, paid, pending
+  - Salaries, Employee Payments
 - **Pending Amounts Section**: Shows pending receivables and payables for the selected period
   - Pending Receivables: Bookings with unpaid balances
   - Pending Payables: Purchases, Expenses, Salaries with pending payments
@@ -122,6 +125,7 @@ Multi-tenant Laravel + Vue + MySQL temple management application with API-first 
 
 ### 16. Daily Poojas
 - **Simplified View**: Shows devotees with nakshatra (no booking details)
+- **Filters**: Filter by deity and/or pooja (poojas sorted by most booked)
 - **Thermal Printer Print**: Compact format for priest's daily schedule
 - **Batch Complete**: Select multiple poojas and mark as completed
 - **Status Tracking**: Pending/Completed counts per pooja
