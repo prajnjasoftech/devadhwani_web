@@ -314,7 +314,7 @@ onMounted(fetchReport);
     <!-- Header with filters -->
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Daily Report</h1>
+        <h1 class="text-2xl font-bold text-gray-900">Financial Report</h1>
         <p class="text-gray-500">Income and Expense Summary</p>
       </div>
 
@@ -354,7 +354,7 @@ onMounted(fetchReport);
     <!-- Print Header (only visible when printing) -->
     <div class="print-header hidden print:block mb-6">
       <h1 class="text-2xl font-bold text-center">{{ authStore.user?.temple?.temple_name || 'Temple' }}</h1>
-      <h2 class="text-lg text-center text-gray-600">Daily Report</h2>
+      <h2 class="text-lg text-center text-gray-600">Financial Report</h2>
       <p class="text-center text-gray-500">{{ reportData?.period?.display }}</p>
     </div>
 
