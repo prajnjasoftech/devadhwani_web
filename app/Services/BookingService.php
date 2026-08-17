@@ -385,17 +385,30 @@ class BookingService
     /**
      * Get daily schedule for a temple
      */
-    public function getDailySchedule(int $templeId, string $date): array
+    public function getDailySchedule(int $templeId, string $date, ?int $deityId = null, ?int $poojaId = null): array
     {
-        $schedules = \App\Models\BookingSchedule::with([
+        $query = \App\Models\BookingSchedule::with([
             'bookingItem.beneficiaries.nakshathra',
             'bookingItem.pooja',
             'bookingItem.deity',
             'bookingItem.booking',
         ])
             ->forTemple($templeId)
-            ->forDate($date)
-            ->orderBy('status')
+            ->forDate($date);
+
+        // Apply filters
+        if ($deityId || $poojaId) {
+            $query->whereHas('bookingItem', function ($q) use ($deityId, $poojaId) {
+                if ($deityId) {
+                    $q->where('deity_id', $deityId);
+                }
+                if ($poojaId) {
+                    $q->where('pooja_id', $poojaId);
+                }
+            });
+        }
+
+        $schedules = $query->orderBy('status')
             ->get()
             // Filter out schedules with missing bookingItem or pooja
             ->filter(fn ($schedule) => $schedule->bookingItem && $schedule->bookingItem->pooja);
